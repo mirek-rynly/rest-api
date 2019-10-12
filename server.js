@@ -13,7 +13,7 @@ let MongoClient = mongodb.MongoClient;
 
 // setup db
 const mongoUrl = `mongodb://${MONGO_SERVER}/${DATABASE}`;
-let mongoQuery = function(callback) { // callback takes db as a param
+let mongoQuery = function(callback) { // callback takes db as a params
   MongoClient.connect(mongoUrl, {useNewUrlParser: true}, (err, raw_db) => {
     if (err) throw err;
     let db = raw_db.db(DATABASE);
@@ -34,33 +34,26 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 
-let getHub = function(db) {
-  db.collection("Hubs").find().each(console.log);
-};
 
-mongoQuery(getHub);
 
-let hackHub = function() {
-  const mongoUrl = `mongodb://${MONGO_SERVER}/${DATABASE}`;
-    MongoClient.connect(mongoUrl, {useNewUrlParser: true}, (err, raw_db) => {
-      if (err) throw err;
+let getHub = function(res) {
+  console.log("outer");
 
-      let db = raw_db.db(DATABASE);
-      console.log("Getting hubs");
-
-      let zipCodes = new Set();
-      console.log(db.collection('Hubs').find({}, {ZipZones: 1}).each(console.log));
-      raw_db.close();
+  // need closure around res
+  let _getHub = function(db) {
+    console.log("ereh");
+    db.collection("Hubs").find({Code: "PDX4"}).each((err, item) => {
+      console.log(item);
+      res.json(item);
     });
+  };
+
+  mongoQuery(_getHub);
 };
-
-// hackHub();
-
 
 app.get("/api/v1/hubs", (req, res) => {
-  console.log("GET hubs")
-  res.json();
-  // res.json({message: "Hello World"});
+  console.log("GET hubs");
+  getHub(res);
 });
 
 app.listen(PORT, () => {
