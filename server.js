@@ -1,11 +1,22 @@
 /* jshint node: true */
 "use strict";
 
-var express = require('express');
-var app = express();
-var port = 8080;
-app.listen(port, function() {
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+
+const PORT = 8081;
+const app = express();
+
+// app.use("api/v1");
+// app.use("api/v1", router);
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+
+app.get("/", (req, res) => {
+  res.json({message: "Hello World"});
+});
+
+app.listen(PORT, () => {
   console.log('Server started');
 });
-// Server static pages
-app.use(express.static('.'));
