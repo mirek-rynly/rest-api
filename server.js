@@ -34,12 +34,10 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 let getZips = function(res) {
-  console.log("outer");
 
-  // need closure around res
+  // need closure around `res`
   let _getZips = function(db) {
-    db.collection("Hubs").find({"ZipZones.ZipCode": "97202"}).each((err, item) => {
-      console.log(item);
+    db.collection("Hubs").findOne({"ZipZones.ZipCode": "97202"}, (err, item) => {
       res.json(item);
     });
   };
@@ -47,12 +45,29 @@ let getZips = function(res) {
   mongoQuery(_getZips);
 };
 
-app.get("/api/v1/hubs", (req, res) => {
-  console.log("GET hubs");
+app.get("/api/v1/service_area", (req, res) => {
+  logRequest(req);
+
+  let source = req.body.source;
+  let destination = req.body.destination;
+
   getZips(res);
 });
 
 app.listen(PORT, () => {
-  console.log("Express server started");
+  console.log(`Express server started on port ${PORT}`);
 });
 
+
+// HELPERS
+
+function logRequest(req) {
+  console.log(`${req.method} ${req.originalUrl} ${getIP(req)}`);
+}
+
+function getIP(req) {
+  // Careful: req.ip doesn't work if we're behind an nginx proxy!
+  // https://stackoverflow.com/questions/8107856/how-to-determine-a-users-ip-address-in-node
+  let raw_ip = req.header('x-forwarded-for') || req.connection.remoteAddress;
+  return raw_ip.split(",")[0].trim();
+}
