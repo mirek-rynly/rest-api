@@ -33,27 +33,23 @@ const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
-
-
-
-let getHub = function(res) {
+let getZips = function(res) {
   console.log("outer");
 
   // need closure around res
-  let _getHub = function(db) {
-    console.log("ereh");
-    db.collection("Hubs").find({Code: "PDX4"}).each((err, item) => {
+  let _getZips = function(db) {
+    db.collection("Hubs").find({"ZipZones.ZipCode": "97202"}).each((err, item) => {
       console.log(item);
       res.json(item);
     });
   };
 
-  mongoQuery(_getHub);
+  mongoQuery(_getZips);
 };
 
 app.get("/api/v1/hubs", (req, res) => {
   console.log("GET hubs");
-  getHub(res);
+  getZips(res);
 });
 
 app.listen(PORT, () => {
