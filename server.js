@@ -5,25 +5,26 @@ let express = require('express');
 let bodyParser = require('body-parser');
 let mongodb = require('mongodb');
 
-const MONGO_SERVER = "localhost:27017";
-const DATABASE = "rynly";
-const PORT = 8081;
+const MONGO_URL = "mongodb://localhost:27017";
+const DB_NAME = "rynly";
+const EXPRESS_PORT = 8081;
 
 let MongoClient = mongodb.MongoClient;
 
-// setup db
-const mongoUrl = `mongodb://${MONGO_SERVER}/${DATABASE}`;
+// mongo connection helper
 let mongoQuery = function(callback) { // callback takes db as a params
-  MongoClient.connect(mongoUrl, {useNewUrlParser: true}, (err, raw_db) => {
+  return MongoClient.connect(MONGO_URL, {useNewUrlParser: true}, (err, client) => {
     if (err) throw err;
-    let db = raw_db.db(DATABASE);
+    let db = client.db(DB_NAME);
     callback(db);
-    raw_db.close();
+    client.close();
   });
 };
 
-mongoQuery((db) => {
-  console.log(`Database connection to ${mongoUrl} successful`);
+// test db connection
+MongoClient.connect(MONGO_URL, {useNewUrlParser: true}, (err, client) => {
+  if (err) throw err;
+  console.log(`DB_NAME connection to ${MONGO_URL} successful`);
 });
 
 // setup server
@@ -33,29 +34,49 @@ const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
-let getZips = function(res) {
+let checkServiceArea = function(sourceZip, destinationZip, res) {
 
-  // need closure around `res`
-  let _getZips = function(db) {
-    db.collection("Hubs").findOne({"ZipZones.ZipCode": "97202"}, (err, item) => {
-      res.json(item);
+  MongoClient.connect(MONGO_URL, {useNewUrlParser: true}, (err, client) => {
+    if (err) throw err;
+    let db = client.db(DB_NAME);
+    // TODO: should check that zipzones exists
+    // > db.Hubs.count({"ZipZones.ZipCode": null, "ZipZones": {$exists: true, $ne: null}})
+    db.collection("Hubs").countDocuments({"ZipZones.ZipCode": sourceZip}, (err, sourceCount) => {
+      console.log(`Zip entriy count for ${sourceZip}: ${sourceCount}`);
+      if (sourceCount < 1) {
+        res.json({ service_availability: false });
+        return;
+      }
+      // TODO: do with just one query
+      console.log("ere");
+      db.collection("Hubs").countDocuments({"ZipZones.ZipCode": destinationZip}, (err, destCount) => {
+        console.log(`Zip entry count for ${destinationZip}: ${destCount}`);
+        if (destCount < 1) {
+          res.json({ service_availability: false });
+          return;
+        }
+
+        res.json({ service_availability: true });
+      });
+
+      client.close(); // CAREFUL: this needs to be in inner db call
     });
-  };
-
-  mongoQuery(_getZips);
+  });
 };
 
 app.get("/api/v1/service_area", (req, res) => {
   logRequest(req);
+  let sourceZip = req.query.source;
+  let destinationZip = req.query.destination;
 
-  let source = req.body.source;
-  let destination = req.body.destination;
-
-  getZips(res);
+  if (!sourceZip || !destinationZip) {
+    throw new Error(`Must provide 'source' and 'destination' params, you provided ${JSON.stringify(req.query)}`);
+  }
+  checkServiceArea(sourceZip, destinationZip, res);
 });
 
-app.listen(PORT, () => {
-  console.log(`Express server started on port ${PORT}`);
+app.listen(EXPRESS_PORT, () => {
+  console.log(`Express server started on port ${EXPRESS_PORT}`);
 });
 
 
