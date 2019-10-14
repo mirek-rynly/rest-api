@@ -26,8 +26,10 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 // define routes
+
+// GET service_availability
 const AVAILABILITY_VALIDATION = [query("source").exists(), query("destination").exists()];
-app.get("/api/v1/service_availability", AVAILABILITY_VALIDATION, (req, res, next) => {
+app.get("/api/v1/service-availability", AVAILABILITY_VALIDATION, (req, res, next) => {
   logRequest(req);
   if (validationErrors(req, res)) return;
 
@@ -37,9 +39,10 @@ app.get("/api/v1/service_availability", AVAILABILITY_VALIDATION, (req, res, next
   checkServiceAvailability(sourceZip, destinationZip, res, next);
 });
 
+// GET quote
 const BOX_SIZES = ["flat", "small", "medium", "large", "full"];
 const QUOTE_VALIDATION = [
-  query("is-expedited").exists().isBoolean().withMessage("must be one of 'true' or 'false'"),
+  query("is-expedited").exists().isBoolean().withMessage("must be one of [true,false]"),
   query("size").exists().isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`)
 ];
 app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
@@ -49,32 +52,35 @@ app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
   let isExpedited = req.query["is-expedited"];
   let size = req.query.size;
 
-  let basePrice;
-  switch (size) {
-    case "flat":
-    case "small":
-    case "medium":
-      basePrice = 5;
-      break;
-    case "large":
-      basePrice = 7;
-      break;
-    case "full":
-      basePrice = 10;
-      break;
-    default:
-      throw new Error(`Illegal box size ${size}`);
-  }
-  let price = (basePrice * ((isExpedited === "true") ? 2 : 1));
-
+  let price = getPackagePrice(size, isExpedited);
   res.json({quote: price, currency: "USD"});
 });
+
+// GET package status
+const PACKAGE_STATUS_VALIDATION = [
+  query("tracking-number").exists()
+  .isLength({min:14, max: 14}).withMessage("must be 14 character string")
+  .isAlphanumeric().withMessage("must be alphanumeric string")
+];
+app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) => {
+  logRequest(req);
+  if (validationErrors(req, res)) return;
+  // TODO: do the above in middleware style
+
+  let trackingNumber = req.query["tracking-number"];
+  res.json({youGave: trackingNumber});
+});
+
+
 
 // error catching middleware
 app.use(function(err, req, res, next) {
   console.error(err.message);
   if (!err.statusCode) err.statusCode = 500;
-  res.status(err.statusCode).send(err.message);
+  // make sure format is consistent with parameter validation
+  res.status(err.statusCode).send(
+    {errors: [{msg: err.message}]}
+  );
 });
 
 // start server
@@ -120,6 +126,25 @@ let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
   });
 };
 
+let getPackagePrice = (size, isExpedited) => {
+  let basePrice;
+  switch (size) {
+    case "flat":
+    case "small":
+    case "medium":
+      basePrice = 5;
+      break;
+    case "large":
+      basePrice = 7;
+      break;
+    case "full":
+      basePrice = 10;
+      break;
+    default:
+      throw new Error(`Illegal box size '${size}'`);
+  }
+  return basePrice * ((isExpedited === "true") ? 2 : 1);
+};
 
 
 // UTILS
