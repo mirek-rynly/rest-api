@@ -3,22 +3,10 @@
 
 let express = require("express");
 let bodyParser = require("body-parser");
-let mongodb = require("mongodb");
-
 const { query, exists, check, validationResult } = require("express-validator");
 
-const MONGO_URL = "mongodb://localhost:27017";
-const MONGO_PARAMS = {useNewUrlParser: true, useUnifiedTopology: true};
-const DB_NAME = "rynly";
+let database = require("./database.js"); // TODO: is this safe?
 const EXPRESS_PORT = 8081;
-
-let MongoClient = mongodb.MongoClient;
-
-// test db connection
-MongoClient.connect(MONGO_URL, MONGO_PARAMS, (err, client) => {
-  if (err) throw err; // die if connection is bad on startup
-  console.log(`DB_NAME connection to ${MONGO_URL} successful`);
-});
 
 // setup server
 const app = express();
@@ -26,6 +14,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 // define routes
+
 
 // GET service_availability
 const AVAILABILITY_VALIDATION = [query("source").exists(), query("destination").exists()];
@@ -38,6 +27,7 @@ app.get("/api/v1/service-availability", AVAILABILITY_VALIDATION, (req, res, next
 
   checkServiceAvailability(sourceZip, destinationZip, res, next);
 });
+
 
 // GET quote
 const BOX_SIZES = ["flat", "small", "medium", "large", "full"];
@@ -56,6 +46,7 @@ app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
   res.json({quote: price, currency: "USD"});
 });
 
+
 // GET package status
 const PACKAGE_STATUS_VALIDATION = [
   query("tracking-number").exists()
@@ -69,40 +60,48 @@ app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) =>
 
   let trackingNumber = req.query["tracking-number"];
 
-  MongoClient.connect(MONGO_URL, MONGO_PARAMS, (err, client) => {
-    if (mongoConnectError(err, client, next)) return;
+  let db = database.get();
+  db.collection("Packages").find({"TrackingNumber": trackingNumber}).toArray((err, packages) => {
+    if (err) {
+      next(err);
+      return;
+    }
+    console.log(`Package result: '${JSON.stringify(packages, null, 2)}'`);
 
-    let db = client.db(DB_NAME);
-    db.collection("Packages").find({"TrackingNumber": trackingNumber}).toArray((err, packages) => {
-      if (mongoConnectError(err, client, next)) return;
-      console.log(`Package result: '${JSON.stringify(packages, null, 2)}'`);
-
-      if (packages.legth === 0) {
-        let err = new Error(`No package found for '${trackingNumber}'`);
+    if (packages.length === 0) {
+      let err = new Error(`No package found for '${trackingNumber}'`);
         err.statusCode = 404; // not found
-        client.close();
-        throw err;
+        next(err);
+        return;
       }
 
-      if (packages.legth === 1) {
+      if (packages.length !== 1) {
         let err = new Error(`Multiple packages (${packages.legth}) found for '${trackingNumber}'`);
         err.statusCode = 500; // internal server error
-        client.close();
-        throw err;
+        next(err);
+        return;
       }
 
-      res.json(packages);
-      client.close();
-    });
-  });
+      let packageResult = packages[0]; // 'package' is a reserved word
 
-  // res.json({youGave: trackingNumber});
+      // STATUSES:
+      // 0: Package Created
+      // 1: Package Picked By Driver
+      // 2: Package Checked In
+      // 3: Package In Transit
+      // 4: ?
+      // 5: Package Delivered
+      res.json({
+        "tracking-number": packageResult.TrackingNumber,
+        "current-status": packageResult.Status,
+        "status-changes": packageResult.Changes
+      });
+    });
 });
 
 
-
 // error catching middleware
-app.use(function(err, req, res, next) {
+app.use((err, req, res, next) => {
   console.error(err.message);
   if (!err.statusCode) err.statusCode = 500;
   // make sure format is consistent with parameter validation
@@ -111,45 +110,51 @@ app.use(function(err, req, res, next) {
   );
 });
 
-// start server
-app.listen(EXPRESS_PORT, () => {
-  console.log(`Express server started on port ${EXPRESS_PORT}`);
-});
+
+// connect to mongo and start server
+database.connect()
+  .then(() => {
+    app.listen(EXPRESS_PORT, () => {
+      console.log(`Express server started on port ${EXPRESS_PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Couldn't connect to mongo: ", err);
+    process.exit(1); // Fail hard if we can't connect to the DB
+  });
 
 
 // HELPERS
 
 let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
+  let db = database.get();
+  let sourceZipQuery = {"ZipZones.ZipCode": sourceZip, "ZipZones": {$exists: true, $ne: null}};
+  db.collection("Hubs").countDocuments(sourceZipQuery, (err, sourceCount) => {
+    if (err) {
+      next(err);
+      return;
+    }
+    console.log(`Zip entry count for source '${sourceZip}': ${sourceCount}`);
 
-  MongoClient.connect(MONGO_URL, MONGO_PARAMS, (err, client) => {
-    if (mongoConnectError(err, client, next)) return;
+    if (sourceCount < 1) {
+      res.json({ service_availability: false });
+      return;
+    }
 
-    let db = client.db(DB_NAME);
-    let sourceZipQuery = {"ZipZones.ZipCode": sourceZip, "ZipZones": {$exists: true, $ne: null}};
-    db.collection("Hubs").countDocuments(sourceZipQuery, (err, sourceCount) => {
-      if (mongoConnectError(err, client, next)) return;
-      console.log(`Zip entry count for '${sourceZip}': ${sourceCount}`);
+    let destZipQuery = {"ZipZones.ZipCode": destinationZip, "ZipZones": {$exists: true, $ne: null}};
+    db.collection("Hubs").countDocuments(destZipQuery, (err, destCount) => {
+      if (err) {
+        next(err);
+        return;
+      }
+      console.log(`Zip entry count for destination '${destinationZip}': ${destCount}`);
 
-      if (sourceCount < 1) {
+      if (destCount < 1) {
         res.json({ service_availability: false });
-        client.close();
         return;
       }
 
-      let destZipQuery = {"ZipZones.ZipCode": destinationZip, "ZipZones": {$exists: true, $ne: null}};
-      db.collection("Hubs").countDocuments(destZipQuery, (err, destCount) => {
-        if (mongoConnectError(err, client, next)) return;
-        console.log(`Zip entry count for '${destinationZip}': ${destCount}`);
-
-        if (destCount < 1) {
-          res.json({ service_availability: false });
-          client.close();
-          return;
-        }
-
-        res.json({ service_availability: true });
-        client.close();
-      });
+      res.json({ service_availability: true });
     });
   });
 };
@@ -181,15 +186,6 @@ let validationErrors = (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     res.status(400).json({ errors: errors.array() });
-    return true;
-  }
-  return false;
-};
-
-let mongoConnectError = (err, client, next) => {
-  if (err) {
-    next(err);
-    if (client) client.close();
     return true;
   }
   return false;
