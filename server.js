@@ -1,9 +1,11 @@
 /* jshint node: true */
 "use strict";
 
-let express = require('express');
-let bodyParser = require('body-parser');
-let mongodb = require('mongodb');
+let express = require("express");
+let bodyParser = require("body-parser");
+let mongodb = require("mongodb");
+
+const { query, exists, check, validationResult } = require("express-validator");
 
 const MONGO_URL = "mongodb://localhost:27017";
 const MONGO_PARAMS = {useNewUrlParser: true, useUnifiedTopology: true};
@@ -24,16 +26,48 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 // define routes
-app.get("/api/v1/service_area", (req, res, next) => {
+const AVAILABILITY_VALIDATION = [query("source").exists(), query("destination").exists()];
+app.get("/api/v1/service_availability", AVAILABILITY_VALIDATION, (req, res, next) => {
   logRequest(req);
+  if (validationErrors(req, res)) return;
+
   let sourceZip = req.query.source;
   let destinationZip = req.query.destination;
 
-  if (!sourceZip || !destinationZip) {
-    throw new Error(`Must provide 'source' and 'destination' params, you provided ${JSON.stringify(req.query)}`);
-  }
+  checkServiceAvailability(sourceZip, destinationZip, res, next);
+});
 
-  checkServiceArea(sourceZip, destinationZip, res, next);
+const BOX_SIZES = ["flat", "small", "medium", "large", "full"];
+const QUOTE_VALIDATION = [
+  query("is-expedited").exists().isBoolean().withMessage("must be one of 'true' or 'false'"),
+  query("size").exists().isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`)
+];
+app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
+  logRequest(req);
+  if (validationErrors(req, res)) return;
+
+  let isExpedited = req.query["is-expedited"];
+  let size = req.query.size;
+
+  let basePrice;
+  switch (size) {
+    case "flat":
+    case "small":
+    case "medium":
+      basePrice = 5;
+      break;
+    case "large":
+      basePrice = 7;
+      break;
+    case "full":
+      basePrice = 10;
+      break;
+    default:
+      throw new Error(`Illegal box size ${size}`);
+  }
+  let price = (basePrice * ((isExpedited === "true") ? 2 : 1));
+
+  res.json({quote: price, currency: "USD"});
 });
 
 // error catching middleware
@@ -51,7 +85,7 @@ app.listen(EXPRESS_PORT, () => {
 
 // HELPERS
 
-let checkServiceArea = (sourceZip, destinationZip, res, next) => {
+let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
 
   MongoClient.connect(MONGO_URL, MONGO_PARAMS, (err, client) => {
     if (mongoConnectError(err, client, next)) return;
@@ -90,6 +124,15 @@ let checkServiceArea = (sourceZip, destinationZip, res, next) => {
 
 // UTILS
 
+let validationErrors = (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return true;
+  }
+  return false;
+};
+
 let mongoConnectError = (err, client, next) => {
   if (err) {
     next(err);
@@ -99,7 +142,6 @@ let mongoConnectError = (err, client, next) => {
   return false;
 };
 
-
 function logRequest(req) {
   console.log(`${req.method} ${req.originalUrl} ${getIP(req)}`);
 }
@@ -107,6 +149,6 @@ function logRequest(req) {
 function getIP(req) {
   // Careful: req.ip doesn't work if we're behind an nginx proxy!
   // https://stackoverflow.com/questions/8107856/how-to-determine-a-users-ip-address-in-node
-  let raw_ip = req.header('x-forwarded-for') || req.connection.remoteAddress;
+  let raw_ip = req.header("x-forwarded-for") || req.connection.remoteAddress;
   return raw_ip.split(",")[0].trim();
 }
