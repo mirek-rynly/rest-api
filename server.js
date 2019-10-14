@@ -68,7 +68,35 @@ app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) =>
   // TODO: do the above in middleware style
 
   let trackingNumber = req.query["tracking-number"];
-  res.json({youGave: trackingNumber});
+
+  MongoClient.connect(MONGO_URL, MONGO_PARAMS, (err, client) => {
+    if (mongoConnectError(err, client, next)) return;
+
+    let db = client.db(DB_NAME);
+    db.collection("Packages").find({"TrackingNumber": trackingNumber}).toArray((err, packages) => {
+      if (mongoConnectError(err, client, next)) return;
+      console.log(`Package result: '${JSON.stringify(packages, null, 2)}'`);
+
+      if (packages.legth === 0) {
+        let err = new Error(`No package found for '${trackingNumber}'`);
+        err.statusCode = 404; // not found
+        client.close();
+        throw err;
+      }
+
+      if (packages.legth === 1) {
+        let err = new Error(`Multiple packages (${packages.legth}) found for '${trackingNumber}'`);
+        err.statusCode = 500; // internal server error
+        client.close();
+        throw err;
+      }
+
+      res.json(packages);
+      client.close();
+    });
+  });
+
+  // res.json({youGave: trackingNumber});
 });
 
 
@@ -100,8 +128,8 @@ let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
     let sourceZipQuery = {"ZipZones.ZipCode": sourceZip, "ZipZones": {$exists: true, $ne: null}};
     db.collection("Hubs").countDocuments(sourceZipQuery, (err, sourceCount) => {
       if (mongoConnectError(err, client, next)) return;
-
       console.log(`Zip entry count for '${sourceZip}': ${sourceCount}`);
+
       if (sourceCount < 1) {
         res.json({ service_availability: false });
         client.close();
@@ -111,8 +139,8 @@ let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
       let destZipQuery = {"ZipZones.ZipCode": destinationZip, "ZipZones": {$exists: true, $ne: null}};
       db.collection("Hubs").countDocuments(destZipQuery, (err, destCount) => {
         if (mongoConnectError(err, client, next)) return;
-
         console.log(`Zip entry count for '${destinationZip}': ${destCount}`);
+
         if (destCount < 1) {
           res.json({ service_availability: false });
           client.close();
