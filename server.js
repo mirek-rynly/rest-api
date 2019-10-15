@@ -1,30 +1,33 @@
 /* jshint node: true */
 "use strict";
 
+require('log-timestamp');
 let express = require("express");
 let bodyParser = require("body-parser");
-const { query, exists, check, validationResult } = require("express-validator");
+let { query, exists, check, validationResult } = require("express-validator");
+let database = require("./database.js");
 
-let database = require("./database.js"); // TODO: is this safe?
 const EXPRESS_PORT = 8081;
 
 // setup server
-const app = express();
+let app = express();
+
+// global middleware
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl} ${getIP(req)}`);
+  next();
+});
 
 // define routes
-
 
 // GET service_availability
 const AVAILABILITY_VALIDATION = [query("source").exists(), query("destination").exists()];
 app.get("/api/v1/service-availability", AVAILABILITY_VALIDATION, (req, res, next) => {
-  logRequest(req);
   if (validationErrors(req, res)) return;
-
   let sourceZip = req.query.source;
   let destinationZip = req.query.destination;
-
   checkServiceAvailability(sourceZip, destinationZip, res, next);
 });
 
@@ -36,9 +39,7 @@ const QUOTE_VALIDATION = [
   query("size").exists().isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`)
 ];
 app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
-  logRequest(req);
   if (validationErrors(req, res)) return;
-
   let isExpedited = req.query["is-expedited"];
   let size = req.query.size;
 
@@ -54,20 +55,23 @@ const PACKAGE_STATUS_VALIDATION = [
   .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
 app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) => {
-  logRequest(req);
   if (validationErrors(req, res)) return;
-  // TODO: do the above in middleware style
 
   let trackingNumber = req.query["tracking-number"];
-
   let db = database.get();
-  db.collection("Packages").find({"TrackingNumber": trackingNumber}).toArray((err, packages) => {
+
+  db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
+    projection: {
+      "TrackingNumber": 1,
+      "Status": 1,
+      "Changes": 1
+    }
+  }).toArray((err, packages) => {
     if (err) {
       next(err);
       return;
     }
-    console.log(`Package result: '${JSON.stringify(packages, null, 2)}'`);
-
+    console.log(`Package query result: '${JSON.stringify(packages, null, 2)}'`);
     if (packages.length === 0) {
       let err = new Error(`No package found for '${trackingNumber}'`);
         err.statusCode = 404; // not found
@@ -100,13 +104,14 @@ app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) =>
 });
 
 
-// error catching middleware
+// default error catching middleware (validation handles its own error reporting)
 app.use((err, req, res, next) => {
   console.error(err.message);
+  console.error(err.stack);
   if (!err.statusCode) err.statusCode = 500;
-  // make sure format is consistent with parameter validation
+  // make sure error format is consistent with parameter validation errors
   res.status(err.statusCode).send(
-    {errors: [{msg: err.message}]}
+    {"errors": [{msg: err.message}]}
   );
 });
 
@@ -191,13 +196,9 @@ let validationErrors = (req, res) => {
   return false;
 };
 
-function logRequest(req) {
-  console.log(`${req.method} ${req.originalUrl} ${getIP(req)}`);
-}
-
-function getIP(req) {
+let getIP = (req) => {
   // Careful: req.ip doesn't work if we're behind an nginx proxy!
   // https://stackoverflow.com/questions/8107856/how-to-determine-a-users-ip-address-in-node
   let raw_ip = req.header("x-forwarded-for") || req.connection.remoteAddress;
   return raw_ip.split(",")[0].trim();
-}
+};
