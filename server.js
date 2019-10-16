@@ -161,7 +161,6 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
   let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
   let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
   let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO
-  let dueDate = "2019-10-15T12:50:06.380Z"; // TODO
 
   // this is how we model box type at the API / DB layer (jikes)
   // envelope is type=0 and envelopeCount="1" with zero dimensions
@@ -222,7 +221,6 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     "discount": 0,
     "UserId": userID,
     "DeliveryMethodId": "1", // 1 is pickup and 2 is delivery (yep, a string, not an int)
-    "dueDate": dueDate,
     "items": [itemObj],
     "promoCodeId": ""
   };
