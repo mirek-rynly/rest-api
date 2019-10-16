@@ -237,28 +237,29 @@ app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => 
 
   let inputPhone = req.query.phone;
 
-  // let transport = axios.create({ // TODO ourter scope?
-  //   withCredentials: true
-  // });
-
-  // RynlyAccessToken
-
-  let params = {
-    phone: inputPhone
-  };
-
+  const url = 'http://localhost:8082/api/user/validatePhone';
+  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg1;";
   let options = {
-    headers: {"Cookie": "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;"}
+    params: { phone: inputPhone },
+    headers: {
+      Cookie: cookie
+    },
   };
 
-  axios.get('http://localhost:8082/api/user/validatePhone', params, options)
+  // Note that even if the phone number fails to validate, the REQUEST will still
+  // succeed and return a 200. We'll need to view the response contents to determine
+  // whether or not the phone number is valid.
+  console.log(`Making phone validation request to '${url}' with options ${JSON.stringify(options)}`);
+  axios.get(url, options)
     .then((innerRes) => {
-      console.log("Validation response:");
-      console.log(JSON.stringiy(innerRes, null, 2));
-      res.send(innerRes);
+      console.log("Phone validation response:");
+      console.log(innerRes.data);
+      res.send(innerRes.data);
     })
     .catch((innerErr) => {
-      console.error(innerErr);
+      // something went wrong with the request itself (e.g. authentication failed)
+      console.error("Phone validation request failure:");
+      innerErr.message = "Internal validating phone number";
       next(innerErr);
     });
 });
