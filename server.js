@@ -138,6 +138,8 @@ let addressValidation = (addressType) =>{
   return validator;
 };
 
+// TODO: still need to validate that the "from" and "to" zip codes are in the service
+// area, as this info is used for package creation
 let newOrderValidation = () => {
   let validator = [
     ev.body("size").exists().withMessage("required param missing").bail()
@@ -225,8 +227,32 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     "promoCodeId": ""
   };
 
-  res.json({packageModel: packageModel});
-  });
+
+  // THE REST REQUEST
+  const url = 'http://localhost:8082/api/package/createmultiplepackage';
+  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;";
+  let options = {
+    headers: {
+      Cookie: cookie
+    },
+  };
+
+  let payload = {
+    packageCreateModels: [packageModel]
+  };
+
+  console.log(`Making package creation request to '${url}' with options ${JSON.stringify(options)}`);
+  axios.post(url, payload, options)
+    .then((innerRes) => {
+      console.log("Package creation response:");
+      console.log(innerRes.data);
+      res.send(innerRes.data);
+    })
+    .catch((innerErr) => {
+      console.error("Package creation request failed");
+      next(innerErr);
+    });
+});
 
 
 const PHONE_VALIDATION = [
@@ -238,7 +264,7 @@ app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => 
   let inputPhone = req.query.phone;
 
   const url = 'http://localhost:8082/api/user/validatePhone';
-  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg1;";
+  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;";
   let options = {
     params: { phone: inputPhone },
     headers: {
@@ -259,7 +285,7 @@ app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => 
     .catch((innerErr) => {
       // something went wrong with the request itself (e.g. authentication failed)
       console.error("Phone validation request failure:");
-      innerErr.message = "Internal validating phone number";
+      innerErr.message = "Internal error validating phone number, token might be expired";
       next(innerErr);
     });
 });
