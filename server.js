@@ -1,7 +1,8 @@
 /* jshint node: true */
 "use strict";
 
-require('log-timestamp');
+require("log-timestamp");
+let axios = require("axios");
 let express = require("express");
 let bodyParser = require("body-parser");
 let ev = require("express-validator");
@@ -226,6 +227,41 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
 
   res.json({packageModel: packageModel});
   });
+
+
+const PHONE_VALIDATION = [
+  ev.query("phone").exists().withMessage("required param missing")
+];
+app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+
+  let inputPhone = req.query.phone;
+
+  // let transport = axios.create({ // TODO ourter scope?
+  //   withCredentials: true
+  // });
+
+  // RynlyAccessToken
+
+  let params = {
+    phone: inputPhone
+  };
+
+  let options = {
+    headers: {"Cookie": "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;"}
+  };
+
+  axios.get('http://localhost:8082/api/user/validatePhone', params, options)
+    .then((innerRes) => {
+      console.log("Validation response:");
+      console.log(JSON.stringiy(innerRes, null, 2));
+      res.send(innerRes);
+    })
+    .catch((innerErr) => {
+      console.error(innerErr);
+      next(innerErr);
+    });
+});
 
 
 // default error catching middleware (validation handles its own error reporting)
