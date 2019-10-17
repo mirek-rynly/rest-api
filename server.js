@@ -9,10 +9,11 @@ let ev = require("express-validator");
 
 let utils = require("./utils.js");
 let database = require("./database.js");
+let quotes = require("./controllers/quotes.js");
 let packages = require("./controllers/packages.js");
+let phone = require("./controllers/phone-validation.js");
 
 const EXPRESS_PORT = 8081;
-const BOX_SIZES = ["envelope", "small", "medium", "large", "full"];
 
 // setup server
 let app = express();
@@ -44,28 +45,15 @@ apiRouter.get("/service-availability", AVAILABILITY_VALIDATION, (req, res, next)
 
 
 // GET quote
-const QUOTE_VALIDATION = [
-  ev.query("is-expedited").exists().withMessage("required param missing").bail()
-    .isBoolean().withMessage("must be one of [true,false]"),
-  ev.query("size").exists().withMessage("required param missing").bail()
-    .isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`)
-];
-apiRouter.get("/quote", QUOTE_VALIDATION, (req, res, next) => {
+apiRouter.get("/quote", quotes.QUOTE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  let isExpedited = req.query["is-expedited"];
-  let size = req.query.size;
-
-  let price = getPackagePrice(size, isExpedited);
-  res.json({quote: price, currency: "USD"});
+  quotes.getQuote(req, res, next);
 });
 
+
+
 // GET package (this should require authentication - eventually)
-const PACKAGE_VALIDATION = [
-  ev.param("trackingNumber").exists().withMessage("required param missing").bail()
-    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
-    .isAlphanumeric().withMessage("must be alphanumeric string")
-];
-apiRouter.get("/package/:trackingNumber", PACKAGE_VALIDATION, (req, res, next) => {
+apiRouter.get("/package/:trackingNumber", packages.PACKAGE_REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
 
   // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
@@ -112,7 +100,7 @@ let addressValidation = (addressType) =>{
 let newOrderValidation = () => {
   let validator = [
     ev.body("size").exists().withMessage("required param missing").bail()
-      .isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`),
+      .isIn(utils.BOX_SIZES).withMessage(`must be one of [${utils.BOX_SIZES}]`),
     ev.body("pickup-note").if(ev.body("pickup-note").exists())
       .isLength({max: 90}).withMessage("max length is 90"),
     ev.body("delivery-note").if(ev.body("delivery-note").exists())
@@ -222,39 +210,11 @@ apiRouter.post("/new-order", newOrderValidation(), (req, res, next) => {
 });
 
 
-const PHONE_VALIDATION = [
-  ev.query("phone").exists().withMessage("required param missing")
-];
-apiRouter.get("/server-validated-phone", PHONE_VALIDATION, (req, res, next) => {
+// GET validated phone number
+apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-
-  let inputPhone = req.query.phone;
-
-  const url = 'http://localhost:8082/api/user/validatePhone';
-  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;";
-  let options = {
-    params: { phone: inputPhone },
-    headers: {
-      Cookie: cookie
-    },
-  };
-
-  // Note that even if the phone number fails to validate, the REQUEST will still
-  // succeed and return a 200. We'll need to view the response contents to determine
-  // whether or not the phone number is valid.
-  console.log(`Making phone validation request to '${url}' with options ${JSON.stringify(options)}`);
-  axios.get(url, options)
-    .then((innerRes) => {
-      console.log("Phone validation response:");
-      console.log(innerRes.data);
-      res.send(innerRes.data);
-    })
-    .catch((innerErr) => {
-      // something went wrong with the request itself (e.g. authentication failed)
-      console.error("Phone validation request failure:");
-      innerErr.message = "Internal error validating phone number, token might be expired";
-      next(innerErr);
-    });
+  let inputPhoneNumber = req.query["phone-number"];
+  phone.getValidatedNumber(inputPhoneNumber, res, next);
 });
 
 
@@ -318,26 +278,6 @@ let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
       res.json({ service_availability: true });
     });
   });
-};
-
-let getPackagePrice = (size, isExpedited) => {
-  let basePrice;
-  switch (size) {
-    case utils.ENVELOPE:
-    case utils.SMALL:
-    case utils.MEDIUM:
-      basePrice = 5;
-      break;
-    case utils.LARGE:
-      basePrice = 7;
-      break;
-    case utils.FULL:
-      basePrice = 10;
-      break;
-    default:
-      throw new Error(`Illegal box size '${size}'`);
-  }
-  return basePrice * ((isExpedited === "true") ? 2 : 1);
 };
 
 
