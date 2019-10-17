@@ -6,7 +6,10 @@ let axios = require("axios");
 let express = require("express");
 let bodyParser = require("body-parser");
 let ev = require("express-validator");
+
+let utils = require("./utils.js");
 let database = require("./database.js");
+let packages = require("./controllers/packages.js");
 
 const EXPRESS_PORT = 8081;
 const BOX_SIZES = ["envelope", "small", "medium", "large", "full"];
@@ -56,18 +59,6 @@ apiRouter.get("/quote", QUOTE_VALIDATION, (req, res, next) => {
   res.json({quote: price, currency: "USD"});
 });
 
-// Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
-const PACKAGE_STATUS_MAP = {
-  0: "Created",
-  1: "Picked By Driver",
-  2: "Checked In",
-  3: "In Transit",
-  4: "Out for Delivery",
-  5: "Delivered",
-  6: "Return to Hub",
-  7: "Cancelled"
-};
-
 // GET package (this should require authentication - eventually)
 const PACKAGE_VALIDATION = [
   ev.param("trackingNumber").exists().withMessage("required param missing").bail()
@@ -80,98 +71,9 @@ apiRouter.get("/package/:trackingNumber", PACKAGE_VALIDATION, (req, res, next) =
   // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
   // internal routes parameter names (e.g /route/:routeParamName) can't have dashes
   let trackingNumber = req.params.trackingNumber;
-  let db = database.get();
 
-  db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
-    projection: {
-      "DateCreated": 1,
-      "TrackingNumber": 1,
-      "From": 1,
-      "To": 1,
-      "Items": 1, // how we'll determine "size"
-      "IsExpedited": 1,
-      "PickupNote": 1,
-      "DeliveryNote": 1,
-      "DueDate": 1,
-      "Status": 1,
-      "Changes": 1
-    }
-  }).toArray((err, dbPackages) => {
-    if (err) {
-      next(err);
-      return;
-    }
-    console.log(`Package query result: '${JSON.stringify(dbPackages, null, 2)}'`);
-    if (dbPackages.length === 0) {
-      let err = new Error(`No package found for '${trackingNumber}'`);
-      err.statusCode = 404; // not found
-      next(err);
-      return;
-    }
-
-    if (dbPackages.length !== 1) {
-      let err = new Error(`Multiple packages (${dbPackages.legth}) found for '${trackingNumber}'`);
-      err.statusCode = 500; // internal server error
-      next(err);
-      return;
-    }
-
-    let dbPackage = dbPackages[0]; // 'package' is a reserved word
-
-    // convert from address object as stored in the DB to the
-    // external-facing address format
-    let externalApiAddress = (dbAddress) => {
-      return {
-        "line-1": dbAddress.Line1,
-        "line-2": dbAddress.Line2,
-        state: dbAddress.State,
-        city: dbAddress.City,
-        zip: dbAddress.Zip,
-        coordinates: {
-          latitude: dbAddress.Location.coordinates[1], // yea, we store coordinates backwards
-          longitude: dbAddress.Location.coordinates[0]
-        },
-        company: dbAddress.Company,
-        "contact-name": dbAddress.ContactName,
-        phone: dbAddress.Phone
-      };
-    };
-
-    let packageSize = (dbPackage) => {
-      let item = dbPackage.Items[0];
-      return(itemObjToSize(item));
-    };
-
-    // e.g. [{ date: X, status: "Created"}]
-    let externalStatusChanges = (dbPackage) =>{
-      let externalChanges = [];
-      for (let dbChange of dbPackage.Changes) {
-        externalChanges.push({
-          date: dbChange.Date,
-          status: PACKAGE_STATUS_MAP[dbChange.Status]
-        });
-      }
-      return externalChanges;
-    };
-
-    // e.g. "/package/label/23d58b12-5542-4920-99fa-f072509df92b"
-    let labelUrl = `/package/label/${dbPackage._id}`;
-
-    res.json({
-      "date-created": dbPackage.DateCreated,
-      "tracking-number": dbPackage.TrackingNumber,
-      "from-address": externalApiAddress(dbPackage.From),
-      "to-address": externalApiAddress(dbPackage.To),
-      "size": packageSize(dbPackage),
-      "is-expedited": dbPackage.IsExpedited,
-      "pickup-note": dbPackage.PickupNote,
-      "delivery-note": dbPackage.DeliveryNote,
-      "due-date": dbPackage.DueDate,
-      "current-status": PACKAGE_STATUS_MAP[dbPackage.Status],
-      "status-changes": externalStatusChanges(dbPackage),
-      "label-url": labelUrl,
-    });
-  });
+  // TODO: don't pass in res and next, do error handling here
+  packages.getPackage(trackingNumber, res, next);
 });
 
 
@@ -219,52 +121,6 @@ let newOrderValidation = () => {
   validator.push(...addressValidation("from-address"));
   validator.push(...addressValidation("to-address"));
   return validator;
-};
-
-// for the given client facing "size" (e.g. "medium"), return the corresponding
-// internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
-let sizeToItemObj = (size) => {
-  // this is how we model package size on the backend :(
-  // envelope is type=0 and envelopeCount="1" with zero dimensions
-  // everything else is type=1 and non-zero dimensions
-  let itemObj = {type: 1, envelopeCount: 0, height: 0, width: 0, depth: 0};
-  switch (size) {
-    case "envelope":
-      return Object.assign(itemObj, {type: 0, envelopeCount: "1"}); // yes, user portal uses a string
-    case "small":
-      return Object.assign(itemObj, {height: 3, width: 9, depth: 9});
-    case "medium":
-      return Object.assign(itemObj, {height: 9, width: 9, depth: 12});
-    case "large":
-      return Object.assign(itemObj, {height: 9, width: 12, depth: 18});
-    case "full":
-      return Object.assign(itemObj, {height: 12, width: 18, depth: 18});
-    default:
-      break;
-  }
-  throw new Error(`Illegal box size '${size}'`);
-};
-
-let itemObjToSize = (itemObj) => {
-  let {Type:type, EnvelopeCount, Height:h, Width:w, Depth:d} = itemObj;
-  if (type === 0) {
-    return "envelope";
-  } else if (type === 1) {
-    switch(true) { // use switch as closure
-      case h === 3 && w === 9 && d === 9:
-        return "small";
-      case h === 9 && w === 9 && d === 12:
-        return "medium";
-      case h === 9 && w === 12 && d === 18:
-        return "large";
-      case h === 12 && w === 18 && d === 18:
-        return "full";
-      default:
-        throw new Error(`illegal box dimensions (h, w, d)=(${h}, ${w}, ${d}')`);
-    }
-  }
-
-  throw new Error(`unrecognized package type '${JSON.stringify(itemObj)}`);
 };
 
 //tests
@@ -318,7 +174,7 @@ apiRouter.post("/new-order", newOrderValidation(), (req, res, next) => {
     "discount": 0,
     "UserId": userID,
     "DeliveryMethodId": 2, // 2 is pickup and 1 is delivery
-    "items": [sizeToItemObj(size)],
+    "items": [utils.sizeToItemObj(size)],
     "promoCodeId": ""
   };
 
@@ -467,15 +323,15 @@ let checkServiceAvailability = (sourceZip, destinationZip, res, next) => {
 let getPackagePrice = (size, isExpedited) => {
   let basePrice;
   switch (size) {
-    case "envelope":
-    case "small":
-    case "medium":
+    case utils.ENVELOPE:
+    case utils.SMALL:
+    case utils.MEDIUM:
       basePrice = 5;
       break;
-    case "large":
+    case utils.LARGE:
       basePrice = 7;
       break;
-    case "full":
+    case utils.FULL:
       basePrice = 10;
       break;
     default:
@@ -485,7 +341,7 @@ let getPackagePrice = (size, isExpedited) => {
 };
 
 
-// UTILS
+// LOCAL UTILS
 
 let validationErrors = (req, res) => {
   const errors = ev.validationResult(req);
