@@ -24,12 +24,15 @@ app.use((req, res, next) => {
 
 // define routes
 
+var apiRouter = express.Router();
+app.use('/api/v1', apiRouter);
+
 // GET service_availability
 const AVAILABILITY_VALIDATION = [
   ev.query("source").exists().withMessage("required param missing"),
   ev.query("destination").exists().withMessage("required param missing")
 ];
-app.get("/api/v1/service-availability", AVAILABILITY_VALIDATION, (req, res, next) => {
+apiRouter.get("/service-availability", AVAILABILITY_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
   let sourceZip = req.query.source;
   let destinationZip = req.query.destination;
@@ -44,7 +47,7 @@ const QUOTE_VALIDATION = [
   ev.query("size").exists().withMessage("required param missing").bail()
     .isIn(BOX_SIZES).withMessage(`must be one of [${BOX_SIZES}]`)
 ];
-app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
+apiRouter.get("/quote", QUOTE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
   let isExpedited = req.query["is-expedited"];
   let size = req.query.size;
@@ -71,7 +74,7 @@ const PACKAGE_VALIDATION = [
     .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
-app.get("/api/v1/package", PACKAGE_VALIDATION, (req, res, next) => {
+apiRouter.get("/package", PACKAGE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
 
   let trackingNumber = req.query["tracking-number"];
@@ -271,7 +274,7 @@ let itemObjToSize = (itemObj) => {
 // process.exit(1);
 
 
-app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
+apiRouter.post("/new-order", newOrderValidation(), (req, res, next) => {
   if (validationErrors(req, res)) return;
 
   let size = req.body.size;
@@ -365,7 +368,7 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
 const PHONE_VALIDATION = [
   ev.query("phone").exists().withMessage("required param missing")
 ];
-app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => {
+apiRouter.get("/server-validated-phone", PHONE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
 
   let inputPhone = req.query.phone;
@@ -399,7 +402,7 @@ app.get("/api/v1/server-validated-phone", PHONE_VALIDATION, (req, res, next) => 
 
 
 // default error catching middleware (validation handles its own error reporting)
-app.use((err, req, res, next) => {
+apiRouter.use((err, req, res, next) => {
   console.error(err.message);
   console.error(err.stack);
   if (!err.statusCode) err.statusCode = 500;
