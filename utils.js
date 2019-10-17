@@ -12,6 +12,14 @@ const FULL = exports.FULL = "full";
 
 const PACKAGE_SIZES = exports.PACKAGE_SIZES = [ENVELOPE, SMALL, MEDIUM, LARGE, FULL];
 
+//tests
+// let itemObj = {type: 2, envelopeCount: 0, height: 0, width: 0, depth: 0};
+// Object.assign(itemObj, {height: 9, width: 12, depth: 18});
+
+// console.log(itemObjToSize(itemObj));
+// process.exit(1);
+
+
 
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})

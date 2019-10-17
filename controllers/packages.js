@@ -7,7 +7,6 @@ let ev = require("express-validator");
 let utils = require("../utils.js");
 let database = require("../database.js");
 
-
 // Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
 const PACKAGE_STATUS_MAP = {
   0: "Created",
@@ -20,17 +19,17 @@ const PACKAGE_STATUS_MAP = {
   7: "Cancelled"
 };
 
-
 exports.PACKAGE_REQUEST_VALIDATOR = [
   ev.param("trackingNumber").exists().withMessage("required param missing").bail()
     .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
 
-exports.getPackage = (trackingNumber, res, next) => {
-
+exports.getPackage = (req, res, next) => {
+  // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
+  // internal routes parameter names (e.g /route/:routeParamName) can't have dashes
+  let trackingNumber = req.params.trackingNumber;
   let db = database.get();
-
   db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
     projection: {
       "DateCreated": 1,

@@ -6,7 +6,7 @@ let ev = require("express-validator");
 
 let utils = require("../utils.js");
 
-exports.QUOTE_VALIDATION = [
+exports.QUOTE_REQUEST_VALIDATOR = [
   ev.query("is-expedited").exists().withMessage("required param missing").bail()
     .isBoolean().withMessage("must be one of [true,false]"),
   ev.query("size").exists().withMessage("required param missing").bail()
