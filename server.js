@@ -220,7 +220,7 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     "pickupNote": pickupNote,
     "discount": 0,
     "UserId": userID,
-    "DeliveryMethodId": "1", // 1 is pickup and 2 is delivery (yep, a string, not an int)
+    "DeliveryMethodId": 2, // 2 is pickup and 1 is delivery
     "items": [itemObj],
     "promoCodeId": ""
   };
