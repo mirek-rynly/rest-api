@@ -53,8 +53,6 @@ app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
   res.json({quote: price, currency: "USD"});
 });
 
-
-
 // Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
 const PACKAGE_STATUS_MAP = {
   0: "Created",
@@ -125,17 +123,18 @@ app.get("/api/v1/package", PACKAGE_VALIDATION, (req, res, next) => {
         city: dbAddress.City,
         zip: dbAddress.Zip,
         coordinates: {
-          latitude: dbAddress.Location.coordinates[1],
+          latitude: dbAddress.Location.coordinates[1], // yea, we store coordinates backwards
           longitude: dbAddress.Location.coordinates[0]
         },
         company: dbAddress.Company,
         "contact-name": dbAddress.ContactName,
-        phone: dbAddress.phone
+        phone: dbAddress.Phone
       };
     };
 
     let packageSize = (dbPackage) => {
-      throw new Error("No implemented");
+      let item = dbPackage.Items[0];
+      return(itemObjToSize(item));
     };
 
     // e.g. [{ date: X, status: "Created"}]
@@ -163,12 +162,13 @@ app.get("/api/v1/package", PACKAGE_VALIDATION, (req, res, next) => {
       "pickup-note": dbPackage.PickupNote,
       "delivery-note": dbPackage.DeliveryNote,
       "due-date": dbPackage.DueDate,
-      "current-status": dbPackage.Status,
+      "current-status": PACKAGE_STATUS_MAP[dbPackage.Status],
       "status-changes": externalStatusChanges(dbPackage),
       "label-url": labelUrl,
     });
   });
 });
+
 
 // POST new package order
 
@@ -225,29 +225,24 @@ let sizeToItemObj = (size) => {
   let itemObj = {type: 1, envelopeCount: 0, height: 0, width: 0, depth: 0};
   switch (size) {
     case "envelope":
-      Object.assign(itemObj, {type: 0, envelopeCount: "1"}); // yes, user portal uses a string
-      break;
+      return Object.assign(itemObj, {type: 0, envelopeCount: "1"}); // yes, user portal uses a string
     case "small":
-      Object.assign(itemObj, {height: 3, width: 9, depth: 9});
-      break;
+      return Object.assign(itemObj, {height: 3, width: 9, depth: 9});
     case "medium":
-      Object.assign(itemObj, {height: 9, width: 9, depth: 12});
-      break;
+      return Object.assign(itemObj, {height: 9, width: 9, depth: 12});
     case "large":
-      Object.assign(itemObj, {height: 9, width: 12, depth: 18});
-      break;
+      return Object.assign(itemObj, {height: 9, width: 12, depth: 18});
     case "full":
-      Object.assign(itemObj, {height: 12, width: 18, depth: 18});
-      break;
+      return Object.assign(itemObj, {height: 12, width: 18, depth: 18});
     default:
-      throw new Error(`Illegal box size '${size}'`);
+      break;
   }
-  return itemObj;
+  throw new Error(`Illegal box size '${size}'`);
 };
 
 
 let itemObjToSize = (itemObj) => {
-  let {type, envelopeCount, height:h, width:w, depth:d} = itemObj;
+  let {Type:type, EnvelopeCount, Height:h, Width:w, Depth:d} = itemObj;
   if (type === 0) {
     return "envelope";
   } else if (type === 1) {
