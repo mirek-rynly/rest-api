@@ -68,16 +68,18 @@ const PACKAGE_STATUS_MAP = {
   7: "Cancelled"
 };
 
-// GET package status
+// GET package (this should require authentication - eventually)
 const PACKAGE_VALIDATION = [
-  ev.query("tracking-number").exists().withMessage("required param missing").bail()
+  ev.param("trackingNumber").exists().withMessage("required param missing").bail()
     .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
-apiRouter.get("/package", PACKAGE_VALIDATION, (req, res, next) => {
+apiRouter.get("/package/:trackingNumber", PACKAGE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
 
-  let trackingNumber = req.query["tracking-number"];
+  // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
+  // internal routes parameter names (e.g /route/:routeParamName) can't have dashes
+  let trackingNumber = req.params.trackingNumber;
   let db = database.get();
 
   db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
@@ -202,6 +204,7 @@ let addressValidation = (addressType) =>{
   return validator;
 };
 
+
 // TODO: still need to validate that the "from" and "to" zip codes are in the service
 // area, as this info is used for package creation
 let newOrderValidation = () => {
@@ -217,7 +220,6 @@ let newOrderValidation = () => {
   validator.push(...addressValidation("to-address"));
   return validator;
 };
-
 
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
@@ -242,7 +244,6 @@ let sizeToItemObj = (size) => {
   }
   throw new Error(`Illegal box size '${size}'`);
 };
-
 
 let itemObjToSize = (itemObj) => {
   let {Type:type, EnvelopeCount, Height:h, Width:w, Depth:d} = itemObj;
