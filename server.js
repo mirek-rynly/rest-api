@@ -54,13 +54,26 @@ app.get("/api/v1/quote", QUOTE_VALIDATION, (req, res, next) => {
 });
 
 
+
+// Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
+const PACKAGE_STATUS_MAP = {
+  0: "Created",
+  1: "Picked By Driver",
+  2: "Checked In",
+  3: "In Transit",
+  4: "Out for Delivery",
+  5: "Delivered",
+  6: "Return to Hub",
+  7: "Cancelled"
+};
+
 // GET package status
-const PACKAGE_STATUS_VALIDATION = [
+const PACKAGE_VALIDATION = [
   ev.query("tracking-number").exists().withMessage("required param missing").bail()
     .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
-app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) => {
+app.get("/api/v1/package", PACKAGE_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
 
   let trackingNumber = req.query["tracking-number"];
@@ -68,45 +81,93 @@ app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) =>
 
   db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
     projection: {
+      "DateCreated": 1,
       "TrackingNumber": 1,
+      "From": 1,
+      "To": 1,
+      "Items": 1, // how we'll determine "size"
+      "IsExpedited": 1,
+      "PickupNote": 1,
+      "DeliveryNote": 1,
+      "DueDate": 1,
       "Status": 1,
       "Changes": 1
     }
-  }).toArray((err, packages) => {
+  }).toArray((err, dbPackages) => {
     if (err) {
       next(err);
       return;
     }
-    console.log(`Package query result: '${JSON.stringify(packages, null, 2)}'`);
-    if (packages.length === 0) {
+    console.log(`Package query result: '${JSON.stringify(dbPackages, null, 2)}'`);
+    if (dbPackages.length === 0) {
       let err = new Error(`No package found for '${trackingNumber}'`);
-        err.statusCode = 404; // not found
-        next(err);
-        return;
+      err.statusCode = 404; // not found
+      next(err);
+      return;
+    }
+
+    if (dbPackages.length !== 1) {
+      let err = new Error(`Multiple packages (${dbPackages.legth}) found for '${trackingNumber}'`);
+      err.statusCode = 500; // internal server error
+      next(err);
+      return;
+    }
+
+    let dbPackage = dbPackages[0]; // 'package' is a reserved word
+
+    // convert from address object as stored in the DB to the
+    // external-facing address format
+    let externalApiAddress = (dbAddress) => {
+      return {
+        "line-1": dbAddress.Line1,
+        "line-2": dbAddress.Line2,
+        state: dbAddress.State,
+        city: dbAddress.City,
+        zip: dbAddress.Zip,
+        coordinates: {
+          latitude: dbAddress.Location.coordinates[1],
+          longitude: dbAddress.Location.coordinates[0]
+        },
+        company: dbAddress.Company,
+        "contact-name": dbAddress.ContactName,
+        phone: dbAddress.phone
+      };
+    };
+
+    let packageSize = (dbPackage) => {
+      throw new Error("No implemented");
+    };
+
+    // e.g. [{ date: X, status: "Created"}]
+    let externalStatusChanges = (dbPackage) =>{
+      let externalChanges = [];
+      for (let dbChange of dbPackage.Changes) {
+        externalChanges.push({
+          date: dbChange.Date,
+          status: PACKAGE_STATUS_MAP[dbChange.Status]
+        });
       }
+      return externalChanges;
+    };
 
-      if (packages.length !== 1) {
-        let err = new Error(`Multiple packages (${packages.legth}) found for '${trackingNumber}'`);
-        err.statusCode = 500; // internal server error
-        next(err);
-        return;
-      }
+    // e.g. "/package/label/23d58b12-5542-4920-99fa-f072509df92b"
+    let labelUrl = `/package/label/${dbPackage._id}`;
 
-      let packageResult = packages[0]; // 'package' is a reserved word
-
-      // STATUSES:
-      // 0: Package Created
-      // 1: Package Picked By Driver
-      // 2: Package Checked In
-      // 3: Package In Transit
-      // 4: ?
-      // 5: Package Delivered
-      res.json({
-        "tracking-number": packageResult.TrackingNumber,
-        "current-status": packageResult.Status,
-        "status-changes": packageResult.Changes
-      });
+    res.json({
+      "date-created": dbPackage.DateCreated,
+      "tracking-number": dbPackage.TrackingNumber,
+      "from-address": externalApiAddress(dbPackage.From),
+      "to-address": externalApiAddress(dbPackage.To),
+      "size": packageSize(dbPackage),
+      "is-expedited": dbPackage.IsExpedited,
+      "pickup-note": dbPackage.PickupNote,
+      "delivery-note": dbPackage.DeliveryNote,
+      "due-date": dbPackage.DueDate,
+      "current-status": dbPackage.Status,
+      "status-changes": externalStatusChanges(dbPackage),
+      "label-url": labelUrl,
     });
+  });
 });
 
 // POST new package order
@@ -114,7 +175,7 @@ app.get("/api/v1/package-status", PACKAGE_STATUS_VALIDATION, (req, res, next) =>
 let addressValidation = (addressType) =>{
   let validator = [];
   let requiredFields = ["line-1", "city", "state", "zip", "contact-name", "phone"];
-  requiredFields.push("location", "location.latitude", "location.longitude");
+  requiredFields.push("coordinates", "coordinates.latitude", "coordinates.longitude");
   for (let requiredField of requiredFields) {
     let fullName = `${addressType}.${requiredField}`;
     validator.push(ev.body(fullName).not().isEmpty().withMessage("required param missing or empty").bail());
@@ -132,8 +193,8 @@ let addressValidation = (addressType) =>{
   validator.push(ev.body(`${addressType}.phone`).isMobilePhone("en-US").withMessage("not a valid phone number"));
 
   // Latitude / longitude validation
-  validator.push(ev.body(`${addressType}.location.latitude`).isDecimal().withMessage("not a valid decimal"));
-  validator.push(ev.body(`${addressType}.location.longitude`).isDecimal().withMessage("not a valid decimal"));
+  validator.push(ev.body(`${addressType}.coordinates.latitude`).isDecimal().withMessage("not a valid decimal"));
+  validator.push(ev.body(`${addressType}.coordinates.longitude`).isDecimal().withMessage("not a valid decimal"));
 
   return validator;
 };
@@ -154,15 +215,11 @@ let newOrderValidation = () => {
   return validator;
 };
 
-app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
-  if (validationErrors(req, res)) return;
 
-  let size = req.body.size;
-  let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
-  let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
-  let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO
-
-  // this is how we model box type at the API / DB layer (jikes)
+// for the given client facing "size" (e.g. "medium"), return the corresponding
+// internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
+let sizeToItemObj = (size) => {
+  // this is how we model package size on the backend :(
   // envelope is type=0 and envelopeCount="1" with zero dimensions
   // everything else is type=1 and non-zero dimensions
   let itemObj = {type: 1, envelopeCount: 0, height: 0, width: 0, depth: 0};
@@ -185,19 +242,60 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     default:
       throw new Error(`Illegal box size '${size}'`);
   }
+  return itemObj;
+};
+
+
+let itemObjToSize = (itemObj) => {
+  let {type, envelopeCount, height:h, width:w, depth:d} = itemObj;
+  if (type === 0) {
+    return "envelope";
+  } else if (type === 1) {
+    switch(true) { // use switch as closure
+      case h === 3 && w === 9 && d === 9:
+        return "small";
+      case h === 9 && w === 9 && d === 12:
+        return "medium";
+      case h === 9 && w === 12 && d === 18:
+        return "large";
+      case h === 12 && w === 18 && d === 18:
+        return "full";
+      default:
+        throw new Error(`illegal box dimensions (h, w, d)=(${h}, ${w}, ${d}')`);
+    }
+  }
+
+  throw new Error(`unrecognized package type '${JSON.stringify(itemObj)}`);
+};
+
+//tests
+// let itemObj = {type: 2, envelopeCount: 0, height: 0, width: 0, depth: 0};
+// Object.assign(itemObj, {height: 9, width: 12, depth: 18});
+
+// console.log(itemObjToSize(itemObj));
+// process.exit(1);
+
+
+app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
+  if (validationErrors(req, res)) return;
+
+  let size = req.body.size;
+  let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
+  let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
+  let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO
 
   // CAREFUL: our client-facing API uses dash-case for parameters,
   // whereas our internal API uses CamelCase / kindaCamelCase
-  let getAddressObj = (addressType) => {
+  let internalApiAddress = (req, addressType) => {
     return {
       "line1": req.body[addressType]["line-1"],
       "line2": req.body[addressType]["line-2"],
       "state": req.body[addressType].state,
       "city": req.body[addressType].city,
       "zip": req.body[addressType].zip,
-      "location": {
-        "latitude": req.body[addressType].location.latitude,
-        "longitude": req.body[addressType].location.longitude
+      "location": { // CAREFUL: externall "coordinates", internally "location"
+        "latitude": req.body[addressType].coordinates.latitude,
+        "longitude": req.body[addressType].coordinates.longitude
       },
       "company": req.body[addressType].company,
       "contactName": req.body[addressType]["contact-name"],
@@ -210,8 +308,8 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
       "note": deliveryNote,
       "isSignatureRequired": false
     },
-    "fromAddress": getAddressObj("from-address"),
-    "toAddress": getAddressObj("to-address"),
+    "fromAddress": internalApiAddress(req, "from-address"),
+    "toAddress": internalApiAddress(req, "to-address"),
     "isExpedited": false,
     "promoCode": "",
     "sourceHub": {}, // it looks hubs get reset server side once we make the call
@@ -221,10 +319,9 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     "discount": 0,
     "UserId": userID,
     "DeliveryMethodId": 2, // 2 is pickup and 1 is delivery
-    "items": [itemObj],
+    "items": [sizeToItemObj(size)],
     "promoCodeId": ""
   };
-
 
   // THE REST REQUEST
   const url = 'http://localhost:8082/api/package/createmultiplepackage';
@@ -244,7 +341,24 @@ app.post("/api/v1/new-order", newOrderValidation(), (req, res, next) => {
     .then((innerRes) => {
       console.log("Package creation response:");
       console.log(innerRes.data);
-      res.send(innerRes.data);
+
+      if (!innerRes.data.success) {
+        console.error("Package creation response was 200 but data indicated error");
+        next(innerRes.data.errors);
+      }
+
+      let packageCount = innerRes.data.data.packageResponseList.length;
+      if (packageCount !== 1) {
+        next("Expected exactly 1 package response, got " + packageCount);
+      }
+
+      let packageObj = innerRes.data.data.packageResponseList[0].package;
+
+      res.send({
+        "tracking-number": packageObj.trackingNumber,
+        "due-date": packageObj.dueDate,
+        "label-url": innerRes.data.data.packageResponseList[0].labelUrl // yea, not part of ".package"
+      });
     })
     .catch((innerErr) => {
       console.error("Package creation request failed");
@@ -295,6 +409,8 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   if (!err.statusCode) err.statusCode = 500;
   // make sure error format is consistent with parameter validation errors
+
+  // TODO: if err is an array this isn't quite right
   res.status(err.statusCode).send(
     {"errors": [{msg: err.message}]}
   );
