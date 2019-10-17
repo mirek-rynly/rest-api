@@ -4,7 +4,6 @@
 require("log-timestamp");
 let axios = require("axios");
 let ev = require("express-validator");
-
 let utils = require("../utils.js");
 
 // TODO: still need to validate that the "from" and "to" zip codes are in the service
@@ -24,11 +23,10 @@ exports.orderRequestValidator = () => {
 };
 
 exports.postOrder = (req, res, next) => {
-
   let size = req.body.size;
   let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
   let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
-  let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO
+  let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO don't hardcode
 
   let packageModel = {
     "recipient": {

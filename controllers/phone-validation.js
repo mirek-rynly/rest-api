@@ -6,7 +6,7 @@ let axios = require("axios");
 let ev = require("express-validator");
 
 exports.REQUEST_VALIDATOR = [
-  ev.query("phone").exists().withMessage("required param missing")
+  ev.query("phone-number").exists().withMessage("required param missing")
 ];
 
 exports.getValidatedNumber = (inputPhone, res, next) => {

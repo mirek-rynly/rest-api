@@ -3,7 +3,6 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
-
 let utils = require("../utils.js");
 
 exports.QUOTE_REQUEST_VALIDATOR = [

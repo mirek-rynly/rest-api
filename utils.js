@@ -12,33 +12,24 @@ const FULL = exports.FULL = "full";
 
 const PACKAGE_SIZES = exports.PACKAGE_SIZES = [ENVELOPE, SMALL, MEDIUM, LARGE, FULL];
 
-//tests
-// let itemObj = {type: 2, envelopeCount: 0, height: 0, width: 0, depth: 0};
-// Object.assign(itemObj, {height: 9, width: 12, depth: 18});
-
-// console.log(itemObjToSize(itemObj));
-// process.exit(1);
-
-
-
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
 exports.sizeToItemObj = (size) => {
   // this is how we model package size on the backend :(
   // envelope is type=0 and envelopeCount="1" with zero dimensions
   // everything else is type=1 and non-zero dimensions
-  let itemObj = {type: 1, envelopeCount: 0, height: 0, width: 0, depth: 0};
+  let itemObj = {Type: 1, EnvelopeCount: 0, Height: 0, Width: 0, Depth: 0};
   switch (size) {
     case ENVELOPE:
-      return Object.assign(itemObj, {type: 0, envelopeCount: "1"}); // yes, user portal uses a string
+      return Object.assign(itemObj, {Type: 0, EnvelopeCount: "1"}); // yes, user portal uses a string
     case SMALL:
-      return Object.assign(itemObj, {height: 3, width: 9, depth: 9});
+      return Object.assign(itemObj, {Height: 3, Width: 9, Depth: 9});
     case MEDIUM:
-      return Object.assign(itemObj, {height: 9, width: 9, depth: 12});
+      return Object.assign(itemObj, {Height: 9, Width: 9, Depth: 12});
     case LARGE:
-      return Object.assign(itemObj, {height: 9, width: 12, depth: 18});
+      return Object.assign(itemObj, {Height: 9, Width: 12, Depth: 18});
     case FULL:
-      return Object.assign(itemObj, {height: 12, width: 18, depth: 18});
+      return Object.assign(itemObj, {Height: 12, Width: 18, Depth: 18});
     default:
       break;
   }

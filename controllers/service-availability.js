@@ -3,7 +3,6 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
-
 let database = require("../database.js");
 let utils = require("../utils.js");
 

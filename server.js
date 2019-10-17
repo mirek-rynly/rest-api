@@ -21,7 +21,7 @@ const EXPRESS_PORT = 8081;
 let app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-app.use((req, res, next) => {
+app.use((req, res, next) => { // log every request
   console.log(`${req.method} ${req.originalUrl} ${getIP(req)}`);
   next();
 });
@@ -29,33 +29,32 @@ app.use((req, res, next) => {
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
-// GET service_availability
+// GET /service_availability?source=97202&destination=97202
 apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
+  availability.getServiceAvailability(res, req, next);
 });
 
-// GET quote
+// GET /quote?is-expedited=true&size=large
 apiRouter.get("/quote", quotes.QUOTE_REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   quotes.getQuote(req, res, next);
 });
 
-
-// GET package (this should require authentication - eventually)
+// GET /package/KM30784144blr1
 apiRouter.get("/package/:trackingNumber", packages.PACKAGE_REQUEST_VALIDATOR, (req, res, next) => {
+  // TODO: this should eventually require authentication (addresses expose PII)
   if (validationErrors(req, res)) return;
   packages.getPackage(req, res, next);
 });
 
-
-// POST new package order
+// POST /new-order
 apiRouter.post("/new-order", orders.orderRequestValidator(), (req, res, next) => {
   if (validationErrors(req, res)) return;
   orders.postOrder(req, res, next);
 });
 
-
-// GET validated phone number
+// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
 apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   let inputPhoneNumber = req.query["phone-number"];
@@ -67,8 +66,8 @@ apiRouter.use((err, req, res, next) => {
   console.error(err.message);
   console.error(err.stack);
   if (!err.statusCode) err.statusCode = 500;
-  // make sure error format is consistent with parameter validation errors
-  res.status(err.statusCode).send( // TODO: if err is an array this isn't quite right
+  // this ensures error format is consistent with parameter validation errors
+  res.status(err.statusCode).send( // TODO: this assumes `err is never an array
     {"errors": [{msg: err.message}]}
   );
 });
