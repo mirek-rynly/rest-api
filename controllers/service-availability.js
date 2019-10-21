@@ -17,27 +17,31 @@ exports.getServiceAvailability = (res, req, next) => {
 
   let db = database.get();
   let sourceZipQuery = {"ZipZones.ZipCode": sourceZip, "ZipZones": {$exists: true, $ne: null}};
-  db.collection("Hubs").countDocuments(sourceZipQuery, (err, sourceCount) => {
+  // CAREFULL: we can't use `.countDocuments` with read-only azure permission
+  // (this call is treated as "running an arbitrary function" as opposed just "reading data"
+  // TODO: projection to have less data coming over the wire
+  // (ideally just use the cursoe instead of toArray)
+  db.collection("Hubs").find(sourceZipQuery).toArray((err, sourceHubs) => {
     if (err) {
       next(err);
       return;
     }
-    console.log(`Zip entry count for source '${sourceZip}': ${sourceCount}`);
 
-    if (sourceCount < 1) {
+    console.log(`Hubs servicing source '${sourceZip}': ${sourceHubs}`);
+    if (sourceHubs.length === 0) {
       res.json({ service_availability: false });
       return;
     }
 
     let destZipQuery = {"ZipZones.ZipCode": destinationZip, "ZipZones": {$exists: true, $ne: null}};
-    db.collection("Hubs").countDocuments(destZipQuery, (err, destCount) => {
+    db.collection("Hubs").find(destZipQuery).toArray((err, destHubs) => {
       if (err) {
         next(err);
         return;
       }
-      console.log(`Zip entry count for destination '${destinationZip}': ${destCount}`);
+      console.log(`Hubs servicing destination '${destinationZip}': ${destHubs.length}`);
 
-      if (destCount < 1) {
+      if (destHubs.length === 0) {
         res.json({ service_availability: false });
         return;
       }
