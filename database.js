@@ -17,7 +17,16 @@ module.exports.connect = () => new Promise((resolve, reject) => {
     } else {
       db = client.db(DB_NAME);
       console.log(`Connection to database ${DB_NAME} at ${MONGO_URL} successful`);
-      resolve(db);
+
+      // check to make sure we have read access
+      db.listCollections().toArray((err, collections) => {
+        if (err) {
+          reject(err);
+        } else {
+          console.log(`Collections: '${collections.map(c => c.name)}'`);
+          resolve(db);
+        }
+      });
     }
   });
 });
