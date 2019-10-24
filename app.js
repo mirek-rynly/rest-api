@@ -13,6 +13,9 @@ let quotes = require("./controllers/quotes.js");
 let packages = require("./controllers/packages.js");
 let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
+let webhooks = require("./controllers/webhooks.js");
+
+const TEST_TOKEN = "testtoken123";
 
 let app = express();
 app.use(bodyParser.urlencoded({extended: true}));
@@ -25,6 +28,8 @@ app.use((req, res, next) => { // log every request
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
+// ROUTES THAT DON'T NEED AUTH
+
 // GET /service_availability?source=97202&destination=97202
 apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
@@ -35,6 +40,41 @@ apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, re
 apiRouter.get("/quote", quotes.QUOTE_REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   quotes.getQuote(req, res, next);
+});
+
+// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
+apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  let inputPhoneNumber = req.query["phone-number"];
+  phone.getValidatedNumber(inputPhoneNumber, res, next);
+});
+
+
+// ROUTES THAT NEED AUTH
+
+// auth midleware
+apiRouter.use((req, res, next) => {
+  let authHeader = req.headers.authorization;
+  if (!authHeader) {
+    let err = new Error("no 'Authorization' header");
+    err.statusCode = 401; // authentication error
+    next(err);
+  }
+
+  let [authType, token] = authHeader.trim().split(' ');
+  if (authType !== 'Bearer') {
+     let err = new Error("expected a 'Bearer' token");
+    err.statusCode = 401;
+    next(err);
+  }
+
+  if (token !== TEST_TOKEN) {
+    let err = new Error("unrecognized token");
+    err.statusCode = 401;
+    next(err);
+  }
+
+  next();
 });
 
 // GET /package/KM30784144blr1
@@ -50,12 +90,25 @@ apiRouter.post("/new-order", orders.orderRequestValidator(), (req, res, next) =>
   orders.postOrder(req, res, next);
 });
 
-// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
-apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
+// GET /webhooks
+apiRouter.post("/webhook", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  let inputPhoneNumber = req.query["phone-number"];
-  phone.getValidatedNumber(inputPhoneNumber, res, next);
+  orders.getAllWebhooks(req, res, next);
 });
+
+// GET /webhook/:id
+
+
+// POST /webhook
+apiRouter.post("/webhook", webhooks.POST_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  webhooks.postWebhook(req, res, next);
+});
+
+
+// DELETE /webhook/:id Unsubscribe from an existing webhook
+// On successful deletion of record, we can see 200 OK or 204 No Content in the response header.
+
 
 // error catching middleware
 apiRouter.use((err, req, res, next) => {

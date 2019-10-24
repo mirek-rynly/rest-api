@@ -15,6 +15,7 @@ database.connect()
   .then(() => {
     app.listen(EXPRESS_PORT, () => {
       console.log(`Express server started on port ${EXPRESS_PORT}`);
+      // TODO: test that we can connect to Rynly server
     });
   })
   .catch((err) => {

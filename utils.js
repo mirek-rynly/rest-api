@@ -57,7 +57,3 @@ exports.itemObjToSize = (itemObj) => {
 
   throw new Error(`unrecognized package type '${JSON.stringify(itemObj)}`);
 };
-
-Object.assign(exports, {
-
-});
