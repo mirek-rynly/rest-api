@@ -9,31 +9,58 @@ const EVENT_TYPES = ["package.update"];
 
 exports.GET_ALL_VALIDATOR = [];
 exports.getAllWebhooks = (req, res, next) => {
-  (async () => {
-    let db = onDiskDB.get();
-    let x = await db.getItem('fibonacci');
-    console.log("got " + x + ' sending as res');
-    res.json(x);
-  })().catch(err => next(err));
+  let db = onDiskDB.get();
+  let allWebhooks = [];
+  db.forEach((datum) => allWebhooks.push(datum))
+    .then(() => {
+      console.log(`All webhooks: ${allWebhooks}`);
+      res.json(allWebhooks);
+    })
+    .catch(err => next(err));
 };
 
-exports.GET_VALIDATOR = [];
+exports.GET_VALIDATOR = [
+  ev.param("trackingNumber").exists().withMessage("required param missing").bail() // TODO: de-dupe with packages.js
+    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
+    .isAlphanumeric().withMessage("must be alphanumeric string")
+];
 exports.getWebhook = (req, res, next) => {
+  let trackingNumber = req.params.trackingNumber;
+  console.log(`Saving webhook record for '${trackingNumber}'`);
+  let db = onDiskDB.get();
+  db.getItem(trackingNumber)
+    .then(dbRecord => {
+      let responseBody = {
+        "tracking-number": trackingNumber,
+        "subscription-url": dbRecord
+      };
+      res.json(responseBody);
+    })
+    .catch(err => next(err));
 };
 
 exports.POST_VALIDATOR = [
-  ev.body("url").exists().withMessage("required param missing").bail()
+  ev.body("tracking-number").exists().withMessage("required param missing").bail() // TODO: de-dupe with packages.js
+    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
+    .isAlphanumeric().withMessage("must be alphanumeric string"),
+  ev.body("subscription-url").exists().withMessage("required param missing").bail()
     .isURL().withMessage("not a valid url")
 ];
 exports.postWebhook = (req, res, next) => {
-  (async () => {
-    let db = onDiskDB.get();
-    let url = req.body.url;
-    let x = await db.setItem('fibonacci', url);
-    console.log("setting fibonacci as " + url);
-    res.json(x);
-  })().catch(err => next(err));
-
+  let trackingNumber = req.body["tracking-number"];
+  let url = req.body["subscription-url"];
+  console.log(`Saving webhook record '${trackingNumber} => ${url}'`);
+  let db = onDiskDB.get();
+  db.setItem(trackingNumber, url)
+    .then(dbSetResponse => {
+      let responseBody = {
+        "msg": "succesfully added webhook",
+        "tracking-number": dbSetResponse.content.key,
+        "subscription-url": dbSetResponse.content.value,
+      };
+      res.json(responseBody);
+    })
+    .catch(err => next(err));
 };
 
 

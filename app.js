@@ -25,6 +25,17 @@ app.use((req, res, next) => { // log every request
   next();
 });
 
+// don't silently remove items with "undefined" values
+// https://stackoverflow.com/questions/40059338/response-json-not-showing-fields-with-value-undefined
+app.set('json replacer', function (key, value) {
+    if (typeof value === "undefined") {
+      return null;
+    }
+    return value;
+  }
+);
+
+
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
@@ -100,7 +111,7 @@ apiRouter.get("/webhooks", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
 });
 
 // GET /webhook/:id
-apiRouter.get("/webhook/:id", webhooks.GET_VALIDATOR, (req, res, next) => {
+apiRouter.get("/webhook/:trackingNumber", webhooks.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getWebhook(req, res, next);
 });
