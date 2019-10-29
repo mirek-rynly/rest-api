@@ -28,7 +28,6 @@ exports.getPackage = (req, res, next) => {
   // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
   // internal routes parameter names (e.g /route/:routeParamName) can't have dashes
   let trackingNumber = req.params.trackingNumber;
-  console.log("gere")
   let db = database.get();
   db.collection("Packages").find({"TrackingNumber": trackingNumber}, {
     projection: {
@@ -120,8 +119,8 @@ exports.getPackage = (req, res, next) => {
       "label-url": labelUrl,
     });
   });
-
-
 };
+
+
 
 

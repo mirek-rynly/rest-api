@@ -1,5 +1,6 @@
 # on-disk webhook "database"
-webHooksDB.json
+local-storage/
+
 
 # AUTO-GENERATE (BY ELASTIC BEANSTALK?)
 

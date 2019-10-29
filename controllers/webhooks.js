@@ -3,24 +3,37 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
-let utils = require("../utils.js");
+let onDiskDB = require("../on-disk-database.js");
 
 const EVENT_TYPES = ["package.update"];
 
-
-// Initialize WebHooks module.
-let WebHooks = require('node-webhooks');
-
-// Initialize webhooks module from on-disk database
-let webHooks = new WebHooks({
-    db: './webHooksDB.json', // json file that store webhook URLs
-    httpSuccessCodes: [200, 201, 202, 203, 204], //optional success http status codes
-});
-
 exports.GET_ALL_VALIDATOR = [];
+exports.getAllWebhooks = (req, res, next) => {
+  (async () => {
+    let db = onDiskDB.get();
+    let x = await db.getItem('fibonacci');
+    console.log("got " + x + ' sending as res');
+    res.json(x);
+  })().catch(err => next(err));
+};
+
+exports.GET_VALIDATOR = [];
+exports.getWebhook = (req, res, next) => {
+};
 
 exports.POST_VALIDATOR = [
-  ev.query("url").exists().withMessage("required param missing").bail()
-    .isURL()//.withMessage("must be a url")
+  ev.body("url").exists().withMessage("required param missing").bail()
+    .isURL().withMessage("not a valid url")
 ];
+exports.postWebhook = (req, res, next) => {
+  (async () => {
+    let db = onDiskDB.get();
+    let url = req.body.url;
+    let x = await db.setItem('fibonacci', url);
+    console.log("setting fibonacci as " + url);
+    res.json(x);
+  })().catch(err => next(err));
+
+};
+
 

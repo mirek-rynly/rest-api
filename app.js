@@ -30,7 +30,7 @@ app.use('/api/v1', apiRouter);
 
 // ROUTES THAT DON'T NEED AUTH
 
-// GET /service_availability?source=97202&destination=97202
+// GET /service-availability?source=97202&destination=97202
 apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
@@ -90,14 +90,20 @@ apiRouter.post("/new-order", orders.orderRequestValidator(), (req, res, next) =>
   orders.postOrder(req, res, next);
 });
 
+
+//////////////////// WEBHOOKS
+
 // GET /webhooks
-apiRouter.post("/webhook", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
+apiRouter.get("/webhooks", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  orders.getAllWebhooks(req, res, next);
+  webhooks.getAllWebhooks(req, res, next);
 });
 
 // GET /webhook/:id
-
+apiRouter.get("/webhook/:id", webhooks.GET_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  webhooks.getWebhook(req, res, next);
+});
 
 // POST /webhook
 apiRouter.post("/webhook", webhooks.POST_VALIDATOR, (req, res, next) => {

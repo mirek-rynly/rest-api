@@ -10,28 +10,18 @@ const DB_NAME = "rynly";
 let db = null;
 
 // Call to intilize the connection
-module.exports.connect = () => new Promise((resolve, reject) => {
-  MongoClient.connect(MONGO_URL, MONGO_PARAMS, function(err, client) {
-    if (err) {
-      reject(err);
-    } else {
-      db = client.db(DB_NAME);
-      console.log(`Connection to database ${DB_NAME} at ${MONGO_URL} successful`);
+module.exports.connect =  async () => {
+  let client = await MongoClient.connect(MONGO_URL, MONGO_PARAMS);
+  db = client.db(DB_NAME);
+  console.log(`Connection to database ${DB_NAME} at ${MONGO_URL} successful`);
 
-      // check to make sure we have read access
-      db.listCollections().toArray((err, collections) => {
-        if (err) {
-          reject(err);
-        } else {
-          console.log(`Collections: '${collections.map(c => c.name)}'`);
-          resolve(db);
-        }
-      });
-    }
-  });
-});
+  // check to make sure we have read access
+  let collections = await db.listCollections().toArray();
+  console.log(`Collections: '${collections.map(c => c.name)}'`);
+  return db;
+};
 
-// From there on our, reuse the existing connection
+// From there on our, re-use the existing connection
 module.exports.get = () => {
   if (!db) {
     throw new Error("Haven't initialized mongo connection yet");
