@@ -6,18 +6,6 @@ let ev = require("express-validator");
 let utils = require("../utils.js");
 let database = require("../database.js");
 
-// Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
-const PACKAGE_STATUS_MAP = {
-  0: "Created",
-  1: "Picked By Driver",
-  2: "Checked In",
-  3: "In Transit",
-  4: "Out for Delivery",
-  5: "Delivered",
-  6: "Return to Hub",
-  7: "Cancelled"
-};
-
 exports.PACKAGE_REQUEST_VALIDATOR = [
   ev.param("trackingNumber").exists().withMessage("required param missing").bail()
     .isLength({min:14, max: 14}).withMessage("must be 14 character string")
@@ -95,7 +83,7 @@ exports.getPackage = (req, res, next) => {
       for (let dbChange of dbPackage.Changes) {
         externalChanges.push({
           date: dbChange.Date,
-          status: PACKAGE_STATUS_MAP[dbChange.Status]
+          status: utils.PACKAGE_STATUS_MAP[dbChange.Status]
         });
       }
       return externalChanges;
@@ -114,7 +102,7 @@ exports.getPackage = (req, res, next) => {
       "pickup-note": dbPackage.PickupNote,
       "delivery-note": dbPackage.DeliveryNote,
       "due-date": dbPackage.DueDate,
-      "current-status": PACKAGE_STATUS_MAP[dbPackage.Status],
+      "current-status": utils.PACKAGE_STATUS_MAP[dbPackage.Status],
       "status-changes": externalStatusChanges(dbPackage),
       "label-url": labelUrl,
     });

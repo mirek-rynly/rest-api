@@ -12,6 +12,18 @@ const FULL = exports.FULL = "full";
 
 const PACKAGE_SIZES = exports.PACKAGE_SIZES = [ENVELOPE, SMALL, MEDIUM, LARGE, FULL];
 
+// Rynly.Platform.Shared.Enumerations.Enum.PackageStatus
+exports.PACKAGE_STATUS_MAP = {
+  0: "created",
+  1: "picked by driver",
+  2: "checked in",
+  3: "in transit",
+  4: "out for delivery",
+  5: "delivered",
+  6: "return to hub",
+  7: "cancelled"
+};
+
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
 exports.sizeToItemObj = (size) => {

@@ -110,7 +110,7 @@ apiRouter.get("/webhooks", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
   webhooks.getAllWebhooks(req, res, next);
 });
 
-// GET /webhook/:id
+// GET /webhook/:trackingNumber
 apiRouter.get("/webhook/:trackingNumber", webhooks.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getWebhook(req, res, next);
@@ -122,9 +122,17 @@ apiRouter.post("/webhook", webhooks.POST_VALIDATOR, (req, res, next) => {
   webhooks.postWebhook(req, res, next);
 });
 
+// DELETE /webhook/:trackingNumber
+apiRouter.delete("/webhook/:trackingNumber", webhooks.DELETE_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  webhooks.deleteWebhook(req, res, next);
+});
 
-// DELETE /webhook/:id Unsubscribe from an existing webhook
-// On successful deletion of record, we can see 200 OK or 204 No Content in the response header.
+// POST /webhook/:trackingNumber
+apiRouter.post("/webhook/trigger/", webhooks.TRIGGER_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  webhooks.triggerWebhook(req, res, next);
+});
 
 
 // error catching middleware
