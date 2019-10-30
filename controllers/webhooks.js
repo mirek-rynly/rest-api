@@ -8,8 +8,6 @@ let axios = require("axios");
 let onDiskDB = require("../on-disk-database.js");
 let utils = require("../utils.js");
 
-// const EVENT_TYPES = ["package.update"];
-
 // shared validation
 
 const TRACKING_NUM_IN_BODY_VALIDATION = // TODO: de-dupe with packages.js
@@ -29,7 +27,12 @@ exports.GET_ALL_VALIDATOR = [];
 exports.getAllWebhooks = (req, res, next) => {
   let db = onDiskDB.get();
   let allWebhooks = [];
-  db.forEach((datum) => allWebhooks.push(datum))
+  db.forEach(datum => {
+      allWebhooks.push({
+        "tracking-number": datum.key,
+        "subscription-url": datum.value
+      });
+    })
     .then(() => {
       console.log(`All webhooks: ${allWebhooks}`);
       res.json(allWebhooks);

@@ -103,31 +103,31 @@ apiRouter.post("/new-order", orders.orderRequestValidator(), (req, res, next) =>
 
 //////////////////// WEBHOOKS
 
-// GET /webhooks
+// GET /webhooks/
 apiRouter.get("/webhooks", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getAllWebhooks(req, res, next);
 });
 
-// GET /webhook/:trackingNumber
+// GET /webhook/:trackingNumber/
 apiRouter.get("/webhook/:trackingNumber", webhooks.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getWebhook(req, res, next);
 });
 
-// POST /webhook
+// POST /webhook/
 apiRouter.post("/webhook", webhooks.POST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.postWebhook(req, res, next);
 });
 
-// DELETE /webhook/:trackingNumber
+// DELETE /webhook/:trackingNumber/
 apiRouter.delete("/webhook/:trackingNumber", webhooks.DELETE_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.deleteWebhook(req, res, next);
 });
 
-// POST /webhook/:trackingNumber
+// POST /webhook/trigger/
 apiRouter.post("/webhook/trigger/", webhooks.TRIGGER_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.triggerWebhook(req, res, next);
