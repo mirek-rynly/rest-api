@@ -78,7 +78,7 @@ exports.postWebhook = (req, res, next) => {
   let db = onDiskDB.get();
   db.setItem(trackingNumber, url)
     .then(saveResponse => {
-      console.log(`Save item response: ${saveResponse}`);
+      console.log(`Save item response: ${JSON.stringify(saveResponse)}`);
       let responseBody = {
         "msg": "succesfully added webhook",
         "tracking-number": saveResponse.content.key,
@@ -101,8 +101,7 @@ exports.deleteWebhook = (req, res, next) => {
       console.log(`Delete result: ${deleteResult}`);
       let responseBody = {
         "msg": "delete operation sucessful",
-        "tracking-number": trackingNumber,
-        "existed": deleteResult.existed
+        "tracking-number": trackingNumber
       };
       res.json(responseBody);
     })

@@ -71,13 +71,7 @@ apiRouter.use((req, res, next) => {
     return next(err);
   }
 
-  let [authType, token] = authHeader.trim().split(' ');
-  if (authType !== 'Bearer') {
-     let err = new Error("expected a 'Bearer' token");
-    err.statusCode = 401;
-    return next(err);
-  }
-
+  let token = authHeader.trim();
   if (token !== TEST_TOKEN) {
     let err = new Error("unrecognized token");
     err.statusCode = 401;
