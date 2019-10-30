@@ -69,12 +69,12 @@ exports.postOrder = (req, res, next) => {
 
       if (!innerRes.data.success) {
         console.error("Package creation response was 200 but data indicated error");
-        next(innerRes.data.errors);
+        return next(innerRes.data.errors);
       }
 
       let packageCount = innerRes.data.data.packageResponseList.length;
       if (packageCount !== 1) {
-        next("Expected exactly 1 package response, got " + packageCount);
+        return next("Expected exactly 1 package response, got " + packageCount);
       }
 
       let packageObj = innerRes.data.data.packageResponseList[0].package;

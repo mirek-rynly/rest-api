@@ -3,6 +3,8 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
+let axios = require("axios");
+
 let onDiskDB = require("../on-disk-database.js");
 let utils = require("../utils.js");
 
@@ -69,6 +71,7 @@ exports.postWebhook = (req, res, next) => {
   let url = req.body["subscription-url"];
   console.log(`Saving webhook record '${trackingNumber} => ${url}'`);
 
+  // TODO: indicate it already exists if you're updating and existing one
   let db = onDiskDB.get();
   db.setItem(trackingNumber, url)
     .then(saveResponse => {
@@ -78,6 +81,7 @@ exports.postWebhook = (req, res, next) => {
         "tracking-number": saveResponse.content.key,
         "subscription-url": saveResponse.content.value,
       };
+      res.status(201);
       res.json(responseBody);
     })
     .catch(err => next(err));
@@ -110,28 +114,79 @@ exports.TRIGGER_VALIDATOR = [
 exports.triggerWebhook = (req, res, next) => {
   let trackingNumber = req.body["tracking-number"];
   let eventType = req.body["event-type"];
-  console.log(`Request to trigger webhook for '${trackingNumber}' for event '${eventType}'`);
+  console.log(`Request to trigger webhook for '${trackingNumber}' with event '${eventType}'`);
 
   let db = onDiskDB.get();
+  let subscriptionUrl = null; // TODO: instead of using promise side effects, switch to `await`
   db.getItem(trackingNumber)
-    .then(subscriptionUrl => {
+    .then(_subscriptionUrl => {
+      subscriptionUrl = _subscriptionUrl;
       console.log(`DB query result: ${subscriptionUrl}`);
       if (!subscriptionUrl) {
-        let err = new Error(`No webhook found for '${trackingNumber}'`);
+        let err = new Error(`No webhook entry found for '${trackingNumber}'`);
         err.statusCode = 404; // not found
-        next(err);
-        return;
+        throw err;
       }
-      let responseBody = {
-        "msg": `sucessfully triggered event`,
-        "event-type": eventType,
-        "tracking-number": trackingNumber,
-        "subscription-url": subscriptionUrl
-      };
-      res.json(responseBody);
+      let payload = getExampleChangeEvent(trackingNumber, eventType);
+      console.log(`Posting to '${subscriptionUrl}' with payload '${payload}`);
+      return axios.post(subscriptionUrl, payload);
     })
-    .catch(err => next(err));
+    .then(innerPostResponse => {
+      console.log(innerPostResponse);
+      console.log(`Post response: ${innerPostResponse.data}`);
+      let responseBody = {
+        "msg": "triggered event posted succesfully",
+        "trigger-params": {
+          "tracking-number": trackingNumber,
+          "event-type": eventType,
+          "subscription-url": subscriptionUrl,
+        },
+        "trigger-response": {
+          "body": innerPostResponse.data,
+          "status-code": innerPostResponse.status
+        }
+      };
+      res.send(responseBody);
+    })
+    .catch(err => {
+      console.log("asdfasdf");
+      console.log(err);
+      let statusCode = err.statusCode ? err.statusCode : err.status; // axious errors use ".status"
+      let responseBody = {
+        "msg": "triggering event failed",
+        "trigger-params": {
+          "tracking-number": trackingNumber,
+          "event-type": eventType,
+          "subscription-url": subscriptionUrl,
+        },
+        "inner-error": {
+          "msg": err.message,
+          "status-code": statusCode
+        }
+      };
+      // ensure error format is consistent with parameter validation errors
+      res.status(500).json({"errors": [responseBody]});
+  });
 };
 
-
 // UTILS
+
+// example Packages.Changes event from DB
+// {
+//   "Date" : ISODate("2019-05-10T11:07:31.136Z"),
+//   "Text" : "Package Created",
+//   "Status" : 0,
+//   "HubId" : null,
+//   "AdminChange" : false,
+//   "ChangedBy" : "7065e111-d0d4-4c17-bf23-49e5f1addcb9"
+// }
+function getExampleChangeEvent(trackingNumber, packageStatus) {
+  if (!Object.values(utils.PACKAGE_STATUS_MAP).includes(packageStatus)) {
+    throw new Error(`Unrecognized package status '${packageStatus}'`);
+  }
+  return {
+      "tracking-number": trackingNumber,
+      "date": "2019-10-20T11:07:31.136Z",
+      "msg": `package ${packageStatus}`
+  };
+}

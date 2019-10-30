@@ -35,7 +35,6 @@ app.set('json replacer', function (key, value) {
   }
 );
 
-
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
@@ -69,20 +68,20 @@ apiRouter.use((req, res, next) => {
   if (!authHeader) {
     let err = new Error("no 'Authorization' header");
     err.statusCode = 401; // authentication error
-    next(err);
+    return next(err);
   }
 
   let [authType, token] = authHeader.trim().split(' ');
   if (authType !== 'Bearer') {
      let err = new Error("expected a 'Bearer' token");
     err.statusCode = 401;
-    next(err);
+    return next(err);
   }
 
   if (token !== TEST_TOKEN) {
     let err = new Error("unrecognized token");
     err.statusCode = 401;
-    next(err);
+    return next(err);
   }
 
   next();
@@ -135,24 +134,28 @@ apiRouter.post("/webhook/trigger/", webhooks.TRIGGER_VALIDATOR, (req, res, next)
 });
 
 
-// error catching middleware
+// error catching middleware, meant to catch generic exceptions (ie the `err` object)
+// special error responses (e.g validation errors) might be handled independently,
+// since we might have multiple errors
 apiRouter.use((err, req, res, next) => {
-  console.error(err.message);
+  console.log("Fallback to generic error catching middleware");
   console.error(err.stack);
   if (!err.statusCode) err.statusCode = 500;
   // this ensures error format is consistent with parameter validation errors
-  res.status(err.statusCode).send( // TODO: this assumes `err is never an array
-    {"errors": [{msg: err.message}]}
+  res.status(err.statusCode).json(
+    {"errors": [{"msg": err.message}]}
   );
 });
 
 
-// helpers
+// HELPERS
 
+// validation errors are handled manually (instead of using our error catching middleware),
+// since we might have multiple error objects we want to return
 let validationErrors = (req, res) => {
   const errors = ev.validationResult(req);
   if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
+    res.status(400).json({"errors": errors.array()});
     return true;
   }
   return false;

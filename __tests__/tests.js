@@ -27,6 +27,7 @@ describe('utils: size to object conversion', () => {
   });
 });
 
+
 // API tests
 
 describe('GET /quote endpoint legit requests', () => {

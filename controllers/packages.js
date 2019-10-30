@@ -33,22 +33,19 @@ exports.getPackage = (req, res, next) => {
     }
   }).toArray((err, dbPackages) => {
     if (err) {
-      next(err);
-      return;
+      return next(err);
     }
     console.log(`Package query result: '${JSON.stringify(dbPackages, null, 2)}'`);
     if (dbPackages.length === 0) {
       let err = new Error(`No package found for '${trackingNumber}'`);
       err.statusCode = 404; // not found
-      next(err);
-      return;
+      return next(err);
     }
 
     if (dbPackages.length !== 1) {
-      let err = new Error(`Multiple packages (${dbPackages.legth}) found for '${trackingNumber}'`);
+      let err = new Error(`Multiple packages (${dbPackages.length}) found for '${trackingNumber}'`);
       err.statusCode = 500; // internal server error
-      next(err);
-      return;
+      return next(err);
     }
 
     let dbPackage = dbPackages[0]; // 'package' is a reserved word

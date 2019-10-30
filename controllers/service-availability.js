@@ -23,27 +23,23 @@ exports.getServiceAvailability = (res, req, next) => {
   // (ideally just use the cursoe instead of toArray)
   db.collection("Hubs").find(sourceZipQuery).toArray((err, sourceHubs) => {
     if (err) {
-      next(err);
-      return;
+      return next(err);
     }
 
     console.log(`Hubs servicing source '${sourceZip}': ${sourceHubs}`);
     if (sourceHubs.length === 0) {
-      res.json({ service_availability: false });
-      return;
+      return res.json({ service_availability: false });
     }
 
     let destZipQuery = {"ZipZones.ZipCode": destinationZip, "ZipZones": {$exists: true, $ne: null}};
     db.collection("Hubs").find(destZipQuery).toArray((err, destHubs) => {
       if (err) {
-        next(err);
-        return;
+        return next(err);
       }
       console.log(`Hubs servicing destination '${destinationZip}': ${destHubs.length}`);
 
       if (destHubs.length === 0) {
-        res.json({ service_availability: false });
-        return;
+        return res.json({ service_availability: false });
       }
 
       res.json({ service_availability: true });

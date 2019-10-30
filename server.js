@@ -12,7 +12,7 @@ let app = require("./app.js");
 const EXPRESS_PORT = 8081;
 
 // connect to mongo and start server
-async function runServer() {
+let runServer = async () => {
   try {
     await mongoDB.connect();
   } catch(err) {
@@ -32,6 +32,6 @@ async function runServer() {
   app.listen(EXPRESS_PORT, () => {
     console.log(`Express server started on port ${EXPRESS_PORT}`);
   });
-}
+};
 
 runServer();

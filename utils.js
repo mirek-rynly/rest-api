@@ -18,11 +18,12 @@ exports.PACKAGE_STATUS_MAP = {
   1: "picked by driver",
   2: "checked in",
   3: "in transit",
-  4: "out for delivery",
+  // 4: "out for delivery", // looks like its never used
   5: "delivered",
   6: "return to hub",
   7: "cancelled"
 };
+
 
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
