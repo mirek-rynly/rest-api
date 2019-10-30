@@ -109,7 +109,8 @@ exports.deleteWebhook = (req, res, next) => {
 exports.TRIGGER_VALIDATOR = [
   TRACKING_NUM_IN_BODY_VALIDATION,
   ev.body("event-type").exists().withMessage("required param missing").bail()
-    .isIn(Object.values(utils.PACKAGE_STATUS_MAP)).withMessage(`must be one of [${Object.values(utils.PACKAGE_STATUS_MAP)}]`)
+    .isIn(Object.values(utils.PACKAGE_STATUS_MAP))
+    .withMessage(`must be one of [${Object.values(utils.PACKAGE_STATUS_MAP)}]`)
 ];
 exports.triggerWebhook = (req, res, next) => {
   let trackingNumber = req.body["tracking-number"];
@@ -128,11 +129,10 @@ exports.triggerWebhook = (req, res, next) => {
         throw err;
       }
       let payload = getExampleChangeEvent(trackingNumber, eventType);
-      console.log(`Posting to '${subscriptionUrl}' with payload '${payload}`);
+      console.log(`Posting to '${subscriptionUrl}' with payload '${JSON.stringify(payload)}`);
       return axios.post(subscriptionUrl, payload);
     })
     .then(innerPostResponse => {
-      console.log(innerPostResponse);
       console.log(`Post response: ${innerPostResponse.data}`);
       let responseBody = {
         "msg": "triggered event posted succesfully",
@@ -149,8 +149,20 @@ exports.triggerWebhook = (req, res, next) => {
       res.send(responseBody);
     })
     .catch(err => {
-      console.log("asdfasdf");
-      console.log(err);
+      let innerError = null;
+      if (err.isAxiosError) {
+        innerError = {
+          "msg": `POST to subscription url failed with message '${err.message}'`,
+          "status-code": err.response.status,
+          "response": err.response.data
+        };
+      } else {
+        innerError = {
+          "msg": err.message,
+          "staus-code": err.statusCode
+        };
+      }
+
       let statusCode = err.statusCode ? err.statusCode : err.status; // axious errors use ".status"
       let responseBody = {
         "msg": "triggering event failed",
@@ -159,10 +171,7 @@ exports.triggerWebhook = (req, res, next) => {
           "event-type": eventType,
           "subscription-url": subscriptionUrl,
         },
-        "inner-error": {
-          "msg": err.message,
-          "status-code": statusCode
-        }
+        "inner-error": innerError
       };
       // ensure error format is consistent with parameter validation errors
       res.status(500).json({"errors": [responseBody]});
