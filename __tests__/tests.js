@@ -30,38 +30,38 @@ describe('utils: size to object conversion', () => {
 
 // API tests
 
-describe('GET /quote endpoint legit requests', () => {
-  legitGetQuoteTest(false, "envelope", 5);
-  legitGetQuoteTest(false, "small", 5);
-  legitGetQuoteTest(false, "medium", 5);
-  legitGetQuoteTest(false, "large", 7);
-  legitGetQuoteTest(false, "full", 10);
+describe('GET /pricing endpoint legit requests', () => {
+  legitGetPricingTest(false, "envelope", 5);
+  legitGetPricingTest(false, "small", 5);
+  legitGetPricingTest(false, "medium", 5);
+  legitGetPricingTest(false, "large", 7);
+  legitGetPricingTest(false, "full", 10);
 
-  legitGetQuoteTest(true, "envelope", 10);
-  legitGetQuoteTest(true, "small", 10);
-  legitGetQuoteTest(true, "medium", 10);
-  legitGetQuoteTest(true, "large", 14);
-  legitGetQuoteTest(true, "full", 20);
+  legitGetPricingTest(true, "envelope", 10);
+  legitGetPricingTest(true, "small", 10);
+  legitGetPricingTest(true, "medium", 10);
+  legitGetPricingTest(true, "large", 14);
+  legitGetPricingTest(true, "full", 20);
 });
 
-function legitGetQuoteTest(isExpedited, size, price) {
+function legitGetPricingTest(isExpedited, size, price) {
   test(`expedited='${isExpedited}' size='${size}'`, async () => {
-    let res = await request(app).get(`/api/v1/quote?is-expedited=${isExpedited}&size=${size}`);
+    let res = await request(app).get(`/api/v1/pricing?is-expedited=${isExpedited}&size=${size}`);
     expect(res.statusCode).toEqual(200);
-    expect(res.body).toEqual({quote: price, currency: "USD"});
+    expect(res.body).toEqual({price: price, currency: "USD"});
   });
 }
 
-describe("GET /quote endpoint bad requests", () => {
+describe("GET /pricing endpoint bad requests", () => {
   test("missing params", async () => {
-    let res = await request(app).get(`/api/v1/quote`);
+    let res = await request(app).get(`/api/v1/pricing`);
     expect(res.statusCode).toEqual(400);
     expect(res.body.errors).toContainEqual(missingParamMsg("is-expedited"));
     expect(res.body.errors).toContainEqual(missingParamMsg("size"));
   });
 
   test("bad param values", async () => {
-    let res = await request(app).get(`/api/v1/quote?is-expedited=X&size=Y`);
+    let res = await request(app).get(`/api/v1/pricing?is-expedited=X&size=Y`);
     expect(res.statusCode).toEqual(400);
     expect(res.body.errors).toContainEqual({
       location : "query",

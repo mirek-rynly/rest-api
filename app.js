@@ -9,7 +9,7 @@ let ev = require("express-validator");
 
 let utils = require("./utils.js");
 let availability = require("./controllers/service-availability.js");
-let quotes = require("./controllers/quotes.js");
+let pricing = require("./controllers/pricing.js");
 let packages = require("./controllers/packages.js");
 let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
@@ -46,10 +46,10 @@ apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, re
   availability.getServiceAvailability(res, req, next);
 });
 
-// GET /quote?is-expedited=true&size=large
-apiRouter.get("/quote", quotes.QUOTE_REQUEST_VALIDATOR, (req, res, next) => {
+// GET /pricing?is-expedited=true&size=large
+apiRouter.get("/pricing", pricing.PRICING_REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  quotes.getQuote(req, res, next);
+  pricing.getPricing(req, res, next);
 });
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
