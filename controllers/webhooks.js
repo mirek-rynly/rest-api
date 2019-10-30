@@ -34,7 +34,7 @@ exports.getAllWebhooks = (req, res, next) => {
       });
     })
     .then(() => {
-      console.log(`All webhooks: ${allWebhooks}`);
+      console.log(`All webhooks: ${JSON.stringify(allWebhooks)}`);
       res.json(allWebhooks);
     })
     .catch(err => next(err));
@@ -98,7 +98,7 @@ exports.deleteWebhook = (req, res, next) => {
   let db = onDiskDB.get();
   db.removeItem(trackingNumber)
     .then(deleteResult => {
-      console.log(`Delete result: ${deleteResult}`);
+      console.log(`Delete result: ${JSON.stringify(deleteResult)}`);
       let responseBody = {
         "msg": "delete operation sucessful",
         "tracking-number": trackingNumber
@@ -135,7 +135,7 @@ exports.triggerWebhook = (req, res, next) => {
       return axios.post(subscriptionUrl, payload);
     })
     .then(innerPostResponse => {
-      console.log(`Post response: ${innerPostResponse.data}`);
+      console.log(`Post response: ${JSON.stringify(innerPostResponse.data)}`);
       let responseBody = {
         "msg": "triggered event posted succesfully",
         "trigger-params": {
