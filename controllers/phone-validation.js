@@ -9,9 +9,10 @@ exports.REQUEST_VALIDATOR = [
   ev.query("phone-number").exists().withMessage("required param missing")
 ];
 
-exports.getValidatedNumber = (inputPhone, res, next) => {
+exports.getValidatedNumber = (req, res, next) => {
   const url = 'http://localhost:8082/api/user/validatePhone';
   const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;";
+  let inputPhone = req.query["phone-number"];
   let options = {
     params: { phone: inputPhone },
     headers: {

@@ -10,6 +10,7 @@ let ev = require("express-validator");
 let utils = require("./utils.js");
 let availability = require("./controllers/service-availability.js");
 let pricing = require("./controllers/pricing.js");
+let dueDates = require("./controllers/due-dates.js");
 let packages = require("./controllers/packages.js");
 let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
@@ -38,31 +39,40 @@ app.set('json replacer', function (key, value) {
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
-// ROUTES THAT DON'T NEED AUTH
+
+////////////////////  ROUTES THAT DON'T NEED AUTH
 
 // GET /service-availability?source=97202&destination=97202
-apiRouter.get("/service-availability", availability.REQUEST_VALIDATION, (req, res, next) => {
+// TODO: make both optional (so we return all)
+apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
 });
 
-// GET /pricing?is-expedited=true&size=large
-apiRouter.get("/pricing", pricing.PRICING_REQUEST_VALIDATOR, (req, res, next) => {
+// GET /pricing?is-expedited=true&size=large (both params are optional)
+apiRouter.get("/pricing", pricing.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   pricing.getPricing(req, res, next);
+});
+
+// GET /delivered-by-date?order-creation-timestamp=2019-02-25T12:39:45Z (param is optional)
+apiRouter.get("/delivered-by-date", dueDates.GET_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  dueDates.getDeliveredByDate(req, res, next);
 });
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
 apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  let inputPhoneNumber = req.query["phone-number"];
-  phone.getValidatedNumber(inputPhoneNumber, res, next);
+  phone.getValidatedNumber(res, next);
 });
 
 
-// ROUTES THAT NEED AUTH
+////////////////////  ROUTES THAT NEED AUTH
 
 // auth midleware
+
+// TODO: add as middle just to routes that need it, otherwise bad requests will hit this and seem like good ones
 apiRouter.use((req, res, next) => {
   let authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -81,9 +91,8 @@ apiRouter.use((req, res, next) => {
   next();
 });
 
-// GET /package/KM30784144blr1
+// GET /package/:trackingNumber
 apiRouter.get("/package/:trackingNumber", packages.PACKAGE_REQUEST_VALIDATOR, (req, res, next) => {
-  // TODO: this should eventually require authentication (addresses expose PII)
   if (validationErrors(req, res)) return;
   packages.getPackage(req, res, next);
 });

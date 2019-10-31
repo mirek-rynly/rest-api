@@ -4,47 +4,24 @@
 
 "use strict";
 
-let assert = require("assert");
+let request = require("supertest");
 let utils = require("../utils.js");
-
-let request = require('supertest');
 let app = require('../app.js');
-
-// UTILS TESTS
-describe('utils: size to object conversion', () => {
-  test('rountrip conversion for all sizes', () => {
-    for (let size of utils.PACKAGE_SIZES) {
-      console.log("Testing converion for " + size);
-      let itemObj = utils.sizeToItemObj(size);
-      let backToSize = utils.itemObjToSize(itemObj);
-      expect(backToSize).toBe(size);
-    }
-  });
-
-  // make the roundtrip is actually doing stuff
-  test('size to item conversion', () => {
-    let mediumItemObj = {Type: 1, EnvelopeCount: 0, Height: 9, Width: 9, Depth: 12};
-    expect(utils.itemObjToSize(mediumItemObj)).toBe("medium");
-  });
-});
-
-
-// API TESTS
 
 // Pricing
 
-describe('GET /pricing endpoint legit requests', () => {
-  legitGetTwoParamPricingTest(false, "envelope", 5);
-  legitGetTwoParamPricingTest(false, "small", 5);
-  legitGetTwoParamPricingTest(false, "medium", 5);
-  legitGetTwoParamPricingTest(false, "large", 7);
-  legitGetTwoParamPricingTest(false, "full", 10);
+describe('GET /pricing valid requests', () => {
+  twoParamTest(false, "envelope", 5);
+  twoParamTest(false, "small", 5);
+  twoParamTest(false, "medium", 5);
+  twoParamTest(false, "large", 7);
+  twoParamTest(false, "full", 10);
 
-  legitGetTwoParamPricingTest(true, "envelope", 10);
-  legitGetTwoParamPricingTest(true, "small", 10);
-  legitGetTwoParamPricingTest(true, "medium", 10);
-  legitGetTwoParamPricingTest(true, "large", 14);
-  legitGetTwoParamPricingTest(true, "full", 20);
+  twoParamTest(true, "envelope", 10);
+  twoParamTest(true, "small", 10);
+  twoParamTest(true, "medium", 10);
+  twoParamTest(true, "large", 14);
+  twoParamTest(true, "full", 20);
 
   test(`expedited='true', no size param'`, async () => {
     let res = await request(app).get(`/api/v1/pricing?is-expedited=false`);
@@ -92,17 +69,7 @@ describe('GET /pricing endpoint legit requests', () => {
 
 });
 
-function legitGetTwoParamPricingTest(isExpedited, size, price) {
-  test(`expedited='${isExpedited}' size='${size}'`, async () => {
-    let res = await request(app).get(`/api/v1/pricing?is-expedited=${isExpedited}&size=${size}`);
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toEqual({
-      pricing: [{size: size, "is-expedited": isExpedited, price: price, currency: "USD"}]
-    });
-  });
-}
-
-describe("GET /pricing endpoint bad requests", () => {
+describe("GET /pricing bad requests", () => {
   test("bad param values", async () => {
     let res = await request(app).get(`/api/v1/pricing?is-expedited=X&size=Y`);
     expect(res.statusCode).toEqual(400);
@@ -122,20 +89,14 @@ describe("GET /pricing endpoint bad requests", () => {
 
 });
 
+// HELPERS
 
-// Service availability
-
-describe("GET /pricing endpoint bad requests", () => {
-  test("missing params", async () => {
-    let res = await request(app).get(`/api/v1/service-availability`);
-    expect(res.statusCode).toEqual(400);
-    expect(res.body.errors).toContainEqual(missingParamMsg("source"));
-    expect(res.body.errors).toContainEqual(missingParamMsg("destination"));
+function twoParamTest(isExpedited, size, price) {
+  test(`expedited='${isExpedited}' size='${size}'`, async () => {
+    let res = await request(app).get(`/api/v1/pricing?is-expedited=${isExpedited}&size=${size}`);
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toEqual({
+      pricing: [{size: size, "is-expedited": isExpedited, price: price, currency: "USD"}]
+    });
   });
-});
-
-
-// TEST UTILS
-function missingParamMsg(paramName, expectedValue) {
-  return {location : "query", msg: "required param missing", param: paramName, value: null};
 }

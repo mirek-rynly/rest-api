@@ -6,7 +6,7 @@ let ev = require("express-validator");
 let database = require("../database.js");
 let utils = require("../utils.js");
 
-exports.REQUEST_VALIDATION = [
+exports.GET_VALIDATOR = [
   ev.query("source").exists().withMessage("required param missing"),
   ev.query("destination").exists().withMessage("required param missing")
 ];
