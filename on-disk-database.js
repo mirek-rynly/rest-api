@@ -3,7 +3,7 @@
 
 let storage = require("node-persist");
 
-const LOCAL_STORAGE_FOLDER = "local-storage";
+const LOCAL_STORAGE_FOLDER = "/tmp/on-disk-db";
 
 let initialized = false;
 

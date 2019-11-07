@@ -27,7 +27,7 @@ exports.getDeliveredByDate = (req, res, next) => {
 
   let creationMoment;
   if (creationDatetimeParam) {
-    creationMoment = moment(creationDatetimeParam).tz('America/Los_Angeles');;
+    creationMoment = moment(creationDatetimeParam).tz('America/Los_Angeles');
   } else {
     creationMoment = moment().tz('America/Los_Angeles'); // "now" in Pacific
   }

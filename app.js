@@ -43,8 +43,7 @@ app.use('/api/v1', apiRouter);
 ////////////////////  ROUTES THAT DON'T NEED AUTH
 
 // GET /service-availability?source=97202&destination=97202
-// TODO: make both optional (so we return all)
-// TODO: change to from-zip and to-zip
+// TODO: change to from-zip and to-zip?
 apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
@@ -65,7 +64,7 @@ apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) =>
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
 apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  phone.getValidatedNumber(res, next);
+  phone.getValidatedNumber(req, res, next);
 });
 
 
