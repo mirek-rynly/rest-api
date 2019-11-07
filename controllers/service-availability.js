@@ -7,8 +7,8 @@ let database = require("../database.js");
 let utils = require("../utils.js");
 
 exports.GET_VALIDATOR = [
-  ev.query("source").exists().withMessage("required param missing"),
-  ev.query("destination").exists().withMessage("required param missing")
+  ev.query("source-zip").exists().withMessage("required param missing"),
+  ev.query("destination-zip").exists().withMessage("required param missing")
 ];
 
 exports.getServiceAvailability = (res, req, next) => {

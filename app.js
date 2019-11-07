@@ -10,7 +10,7 @@ let ev = require("express-validator");
 let utils = require("./utils.js");
 let availability = require("./controllers/service-availability.js");
 let pricing = require("./controllers/pricing.js");
-let dueDates = require("./controllers/due-dates.js");
+let deliveryDates = require("./controllers/delivery-dates.js");
 let packages = require("./controllers/packages.js");
 let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
@@ -44,6 +44,7 @@ app.use('/api/v1', apiRouter);
 
 // GET /service-availability?source=97202&destination=97202
 // TODO: make both optional (so we return all)
+// TODO: change to from-zip and to-zip
 apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
@@ -56,13 +57,13 @@ apiRouter.get("/pricing", pricing.GET_VALIDATOR, (req, res, next) => {
 });
 
 // GET /delivered-by-date?order-creation-timestamp=2019-02-25T12:39:45Z (param is optional)
-apiRouter.get("/delivered-by-date", dueDates.GET_VALIDATOR, (req, res, next) => {
+apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
-  dueDates.getDeliveredByDate(req, res, next);
+  deliveryDates.getDeliveredByDate(req, res, next);
 });
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
-apiRouter.get("/validated-phone-number", phone.REQUEST_VALIDATOR, (req, res, next) => {
+apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   phone.getValidatedNumber(res, next);
 });

@@ -5,7 +5,7 @@ require("log-timestamp");
 let axios = require("axios");
 let ev = require("express-validator");
 
-exports.REQUEST_VALIDATOR = [
+exports.GET_VALIDATOR = [
   ev.query("phone-number").exists().withMessage("required param missing")
 ];
 

@@ -23,7 +23,7 @@ describe('GET /pricing valid requests', () => {
   twoParamTest(true, "large", 14);
   twoParamTest(true, "full", 20);
 
-  test(`expedited='true', no size param'`, async () => {
+  test(`is-expedited='true', no size param'`, async () => {
     let res = await request(app).get(`/api/v1/pricing?is-expedited=false`);
     expect(res.statusCode).toEqual(200);
     expect(res.body).toEqual({
@@ -37,7 +37,7 @@ describe('GET /pricing valid requests', () => {
     });
   });
 
-  test(`size='medium', no expedited param'`, async () => {
+  test(`no is-expedited param, size='medium'`, async () => {
     let res = await request(app).get(`/api/v1/pricing?size=medium`);
     expect(res.statusCode).toEqual(200);
     expect(res.body).toEqual({
@@ -48,7 +48,7 @@ describe('GET /pricing valid requests', () => {
     });
   });
 
-  test(`no size param, no expedited param'`, async () => {
+  test(`no is-expedited param, no size param'`, async () => {
     let res = await request(app).get(`/api/v1/pricing`);
     expect(res.statusCode).toEqual(200);
     expect(res.body).toEqual({
@@ -92,7 +92,7 @@ describe("GET /pricing bad requests", () => {
 // HELPERS
 
 function twoParamTest(isExpedited, size, price) {
-  test(`expedited='${isExpedited}' size='${size}'`, async () => {
+  test(`is-expedited='${isExpedited}' size='${size}'`, async () => {
     let res = await request(app).get(`/api/v1/pricing?is-expedited=${isExpedited}&size=${size}`);
     expect(res.statusCode).toEqual(200);
     expect(res.body).toEqual({
