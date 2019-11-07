@@ -16,8 +16,6 @@ let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
 let webhooks = require("./controllers/webhooks.js");
 
-const TEST_TOKEN = "testtoken123";
-
 let app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -43,7 +41,7 @@ app.use('/api/v1', apiRouter);
 ////////////////////  ROUTES THAT DON'T NEED AUTH
 
 // GET /service-availability?source=97202&destination=97202
-// TODO: change to from-zip and to-zip?
+// TODO: consider changing to from-zip and to-zip
 apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
@@ -61,12 +59,6 @@ apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) =>
   deliveryDates.getDeliveredByDate(req, res, next);
 });
 
-// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
-apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {
-  if (validationErrors(req, res)) return;
-  phone.getValidatedNumber(req, res, next);
-});
-
 
 ////////////////////  ROUTES THAT NEED AUTH
 
@@ -82,13 +74,29 @@ apiRouter.use((req, res, next) => {
   }
 
   let token = authHeader.trim();
-  if (token !== TEST_TOKEN) {
-    let err = new Error("unrecognized token");
-    err.statusCode = 401;
-    return next(err);
-  }
 
-  next();
+  // HACK: phone validation call is inexpensive and requires auth,
+  // so we'll use that to make sure we're authorized
+  (async (_token, _next) => {
+    try {
+      console.log("Using phone validation to confirm auth");
+      let axiosRes = await phone.rynlyServerPhoneValidation(_token, "971-222-6649");
+    } catch(axiosErr) {
+      // something went wrong with the request itself (e.g. authentication failed)
+      console.error("Phone validation request failure:");
+      console.error(axiosErr);
+      let _err = new Error("token authentication failed");
+      _err.statusCode = 401; // authentication error
+      _next(_err);
+    }
+    _next();
+  })(token, next);
+});
+
+// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
+apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  phone.getValidatedNumber(req, res, next);
 });
 
 // GET /package/:trackingNumber

@@ -24,7 +24,6 @@ exports.PACKAGE_STATUS_MAP = {
   7: "cancelled"
 };
 
-
 // for the given client facing "size" (e.g. "medium"), return the corresponding
 // internal representation (e.g. {type: 0, envelopeCount: 0, height: 9, width: 9, depth: 12})
 exports.sizeToItemObj = (size) => {

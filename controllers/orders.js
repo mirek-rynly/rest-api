@@ -49,11 +49,11 @@ exports.postOrder = (req, res, next) => {
   };
 
   // THE REST REQUEST
-  const url = 'http://localhost:8082/api/package/createmultiplepackage';
-  const cookie = "RynlyAccessToken=%2BRjECzm8Xk9Y%2BboADaS4FZu2%2FBjR0aBZ9cT8cXRzW59Va5xOgJpXoI1G%2F8DxuRGg;";
+  const url = 'https://uatuser.rynly.com/api/package/createmultiplepackage';
+  let authToken = req.headers.authorization.trim();
   let options = {
     headers: {
-      Cookie: cookie
+      Authorization: authToken
     },
   };
 

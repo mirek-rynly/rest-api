@@ -35,7 +35,7 @@ exports.getAllWebhooks = (req, res, next) => {
     })
     .then(() => {
       console.log(`All webhooks: ${JSON.stringify(allWebhooks)}`);
-      res.json(allWebhooks);
+      res.json({webhooks: allWebhooks});
     })
     .catch(err => next(err));
 };
