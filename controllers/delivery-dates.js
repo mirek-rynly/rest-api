@@ -3,63 +3,65 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
-let moment = require("moment");
+let moment = require("moment-timezone");
 let utils = require("../utils.js");
 
+const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DDTHH:MM:SS";
 
 exports.GET_VALIDATOR = [
   ev.query("source-zip").exists().withMessage("required param missing"),
   ev.query("destination-zip").exists().withMessage("required param missing"),
-  ev.query("is-expedited").optional().isBoolean().withMessage("must be one of [true,false]"),
-  ev.query("order-creation-date").optional()
-    // .custom(dateStr => dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/))
-      // .withMessage("date must be formatted as YYYY-MM-DD").bail()
-    .isISO8601().withMessage("illegal date value")
+  ev.query("is-expedited").exists().withMessage("required param missing").bail()
+    .isBoolean().withMessage("must be one of [true,false]"),
+  ev.query("order-creation-datetime").optional()
+    .custom(dateStr => dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+$/))
+      .withMessage("ISO8601 date must include time and may not include timezone (we assume pacific)").bail()
+    .isISO8601().withMessage("illegal date value, must be ISO8601")
 ];
 
 exports.getDeliveredByDate = (req, res, next) => {
   let sourceZip = req.query["source-zip"];
   let destinationZip = req.query["destination-zip"];
   let isExpeditedStr = req.query["is-expedited"];
-  let creationDateParam = req.query["order-creation-date"];
+  let creationDatetimeParam = req.query["order-creation-datetime"];
 
-  let creationDateStr;
-  if (!creationDateParam) {
-    creationDateStr = moment().format("YYYY-MM-DD");
+  let creationMoment;
+  if (creationDatetimeParam) {
+    creationMoment = moment(creationDatetimeParam).tz('America/Los_Angeles');;
   } else {
-    creationDateStr = creationDateParam;
+    creationMoment = moment().tz('America/Los_Angeles'); // "now" in Pacific
   }
 
   let isLocal = (isPortlandZip(sourceZip) === isPortlandZip(destinationZip));
   let isExpedited = (isExpeditedStr === "true");
 
-  let expeditedType = (isExpedited ? "expedited " : "non-expedited");
-  let distanceType = (isLocal ? "local" : "long-distance");
-  let orderCreationMsg = (creationDateParam ? creationDateStr : "now (" + creationDateStr + ")");
-  let msg = `${expeditedType} ${distanceType} delivery for order placed ${creationDateStr} Pacific`;
-
-  // "end of day due date for order placed XYZ"
+  // e.g. "end of day due date for order placed at given time (2019-10-28T13:00:00 Pacific)"
+  let whenPlaced = creationDatetimeParam ? "at given time" : "now";
+  let creationMomentStr = creationMoment.format(DATETIME_DISPLAY_FORMAT);
+  let msg = `end of day due date for order placed ${whenPlaced} (${creationMomentStr} Pacific)`;
 
   res.json({
     msg: msg,
-    "due-date": getDueDate(isExpedited, isLocal, creationDateStr)
+    "due-date": getDueDate(isExpedited, isLocal, creationMoment)
   });
 };
 
-
 // HELPERS
 
-let getDueDate = (isExpedited, isLocal, creationDateStr) => {
-  if (!isExpedited) { // non-expedited always 3 days
+let getDueDate = (isExpedited, isLocal, creationMoment) => {
+  let creationDateStr = creationMoment.format("YYYY-MM-DD");
+
+  // non-expedited always 3 days
+  if (!isExpedited) {
     return addBusinessDays(creationDateStr, 3);
   }
 
-  if (!isLocal) { // long distance expedited is always next day
-    return addBusinessDays(creationDateStr, 1);
+  // local expedited before 11 is same day
+  if (isLocal && creationMoment.hours() < 11) {
+    return creationDateStr;
   }
 
-  // local expedited depends on time of day order is placed here
-  // TODO: take into account time of day
+  // all other expedited are next day
   return addBusinessDays(creationDateStr, 1);
 };
 
@@ -73,13 +75,18 @@ let isPortlandZip = (zipStr) => {
 
 // takes string in YYYY-MM-DD, returns string in YYYY-MM-DD
 let addBusinessDays = (dateStr, daysToAdd) => {
+  if (dateStr.match(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
+    throw new Error("bad dateStr format: " + dateStr);
+  }
+
   if (daysToAdd < 1) {
     throw new Error("daysToAdd can't be < 1");
   }
-  let tomorrowStr = moment(dateStr).add('days', 1).format("YYYY-MM-DD");
 
-  // placing an order on friday is the same as placing it on saturday or sunday
-  if (isFriday(dateStr) || isSaturday(dateStr)) {
+  let tomorrowStr = moment(dateStr).add(1, 'days').format("YYYY-MM-DD");
+
+  // placing an order on friday or saturday is the same as placing it sunday
+  if (isFridayOrSaturday(dateStr)) {
     return addBusinessDays(tomorrowStr, daysToAdd);
   }
 
@@ -90,10 +97,6 @@ let addBusinessDays = (dateStr, daysToAdd) => {
   return addBusinessDays(tomorrowStr, daysToAdd - 1);
 };
 
-let isFriday = (dateStr) => {
-  return moment(dateStr).day() === 5;
-};
-
-let isSaturday = (dateStr) => {
-  return moment(dateStr).day() === 6;
+let isFridayOrSaturday = (dateStr) => {
+  return moment(dateStr).day() === 5 || moment(dateStr).day() === 6;
 };
