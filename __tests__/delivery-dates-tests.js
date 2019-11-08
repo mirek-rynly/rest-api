@@ -8,8 +8,8 @@ let request = require("supertest");
 let testUtils = require("./test-utils.js");
 let app = require('../app.js');
 
-const LOCAL_PARAMS = "source-zip=97202&destination-zip=97202";
-const LONG_DISTANCE_PARAMS = "source-zip=97202&destination-zip=98001";
+const LOCAL_PARAMS = "from-zip=97202&to-zip=97202";
+const LONG_DISTANCE_PARAMS = "from-zip=97202&to-zip=98001";
 
 describe("GET /delivery-date with no order-creation-timestamp given", () => {
   test("non-expedited local package created now", async () => {
@@ -75,8 +75,8 @@ describe("GET /delivery-date param validation", () => {
   test("no params", async () => {
     let res = await request(app).get(`/api/v1/delivery-date`);
     expect(res.statusCode).toEqual(400);
-    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("source-zip"));
-    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("destination-zip"));
+    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("from-zip"));
+    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("to-zip"));
     expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("is-expedited"));
   });
 });

@@ -40,8 +40,7 @@ app.use('/api/v1', apiRouter);
 
 ////////////////////  ROUTES THAT DON'T NEED AUTH
 
-// GET /service-availability?source=97202&destination=97202
-// TODO: consider changing to from-zip and to-zip
+// GET /service-availability?from-zip=97202&to-zip=97202
 apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);

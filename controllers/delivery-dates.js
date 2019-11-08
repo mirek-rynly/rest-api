@@ -9,8 +9,8 @@ let utils = require("../utils.js");
 const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DDTHH:MM:SS";
 
 exports.GET_VALIDATOR = [
-  ev.query("source-zip").exists().withMessage("required param missing"),
-  ev.query("destination-zip").exists().withMessage("required param missing"),
+  ev.query("from-zip").exists().withMessage("required param missing"),
+  ev.query("to-zip").exists().withMessage("required param missing"),
   ev.query("is-expedited").exists().withMessage("required param missing").bail()
     .isBoolean().withMessage("must be one of [true,false]"),
   ev.query("order-creation-datetime").optional()
@@ -20,8 +20,8 @@ exports.GET_VALIDATOR = [
 ];
 
 exports.getDeliveredByDate = (req, res, next) => {
-  let sourceZip = req.query["source-zip"];
-  let destinationZip = req.query["destination-zip"];
+  let fromZip = req.query["from-zip"];
+  let toZip = req.query["to-zip"];
   let isExpeditedStr = req.query["is-expedited"];
   let creationDatetimeParam = req.query["order-creation-datetime"];
 
@@ -32,7 +32,7 @@ exports.getDeliveredByDate = (req, res, next) => {
     creationMoment = moment().tz('America/Los_Angeles'); // "now" in Pacific
   }
 
-  let isLocal = (isPortlandZip(sourceZip) === isPortlandZip(destinationZip));
+  let isLocal = (isPortlandZip(fromZip) === isPortlandZip(toZip));
   let isExpedited = (isExpeditedStr === "true");
 
   // e.g. "end of day due date for order placed at given time (2019-10-28T13:00:00 Pacific)"
