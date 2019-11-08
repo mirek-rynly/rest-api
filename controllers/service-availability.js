@@ -21,24 +21,26 @@ exports.getServiceAvailability = (res, req, next) => {
   // (this call is treated as "running an arbitrary function" as opposed just "reading data"
   // TODO: projection to have less data coming over the wire
   // (ideally just use the cursoe instead of toArray)
-  db.collection("Hubs").find(fromZipQuery).toArray((err, sourceHubs) => {
+  db.collection("Hubs").find(fromZipQuery).toArray((err, fromHubs) => {
     if (err) {
       return next(err);
     }
 
-    console.log(`Hubs servicing source '${fromZip}': ${sourceHubs}`);
-    if (sourceHubs.length === 0) {
+    let fromHubNames = fromHubs.map(hub => hub.Code);
+    console.log(`Hubs servicing from-zip '${fromZip}': ${JSON.stringify(fromHubNames)}`);
+    if (fromHubs.length === 0) {
       return res.json({ service_availability: false });
     }
 
     let destZipQuery = {"ZipZones.ZipCode": toZip, "ZipZones": {$exists: true, $ne: null}};
-    db.collection("Hubs").find(destZipQuery).toArray((err, destHubs) => {
+    db.collection("Hubs").find(destZipQuery).toArray((err, toHubs) => {
       if (err) {
         return next(err);
       }
-      console.log(`Hubs servicing destination '${toZip}': ${destHubs.length}`);
+      let toHubNames = toHubs.map(hub => hub.Code);
+      console.log(`Hubs servicing to-zip '${toZip}': ${JSON.stringify(toHubNames)}`);
 
-      if (destHubs.length === 0) {
+      if (toHubs.length === 0) {
         return res.json({ service_availability: false });
       }
 

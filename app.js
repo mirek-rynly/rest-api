@@ -11,6 +11,7 @@ let utils = require("./utils.js");
 let availability = require("./controllers/service-availability.js");
 let pricing = require("./controllers/pricing.js");
 let deliveryDates = require("./controllers/delivery-dates.js");
+let users = require("./controllers/users.js");
 let packages = require("./controllers/packages.js");
 let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
@@ -91,6 +92,13 @@ apiRouter.use((req, res, next) => {
     _next();
   })(token, next);
 });
+
+// GET /user-id (TEMP)
+apiRouter.get("/user-id", users.GET_VALIDATOR, (req, res, next) => {
+  if (validationErrors(req, res)) return;
+  users.getUserId(req, res, next);
+});
+
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
 apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {

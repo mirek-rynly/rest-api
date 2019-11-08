@@ -24,8 +24,8 @@ exports.getValidatedNumber = (req, res, next) => {
       // something went wrong with the request itself (e.g. authentication failed)
       console.error("Phone validation request failure:");
       console.error(axiosErr);
-      axiosErr.message = "Internal error validating phone number, authentication likely failed";
-      _next(axiosErr);
+      let err = new Error("Internal error validating phone number");
+      _next(err);
     }
     _res.send(axiosRes.data);
   })(req, res, next);
@@ -33,7 +33,7 @@ exports.getValidatedNumber = (req, res, next) => {
 
 // HACK: exporting since this is an easy way to check that we have a legit token
 // careful, this function might throw an exception!
-let rynlyServerPhoneValidation = exports.rynlyServerPhoneValidation = async (authToken, inputPhone) => {
+let rynlyServerPhoneValidation = async (authToken, inputPhone) => {
   const url = `${RYNLY_SERVER_URL}/api/user/validatePhone`;
   let options = {
     params: {
@@ -47,9 +47,11 @@ let rynlyServerPhoneValidation = exports.rynlyServerPhoneValidation = async (aut
   // Note that even if the phone number fails to validate, the REQUEST will still
   // succeed and return a 200. We'll need to view the response contents to determine
   // whether or not the phone number is valid.
-  console.log(`Making phone validation request to '${url}' with options ${JSON.stringify(options)}`);
+  console.log(`Making phone validation GET request to '${url}' with options ${JSON.stringify(options)}`);
   let axiosRes = await axios.get(url, options);
   console.log("Phone validation response:");
   console.log(axiosRes.data);
   return axiosRes;
 };
+
+exports.rynlyServerPhoneValidation = rynlyServerPhoneValidation;

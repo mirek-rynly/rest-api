@@ -9,6 +9,7 @@ let mongoDB = require("./database.js");
 let onDiskDB = require("./on-disk-database");
 let app = require("./app.js");
 
+const { RYNLY_SERVER_URL } = require("./config.js");
 const EXPRESS_PORT = 8081;
 
 // connect to mongo and start server
@@ -28,6 +29,7 @@ let runServer = async () => {
   }
 
   // TODO: test that we can connect to Rynly server
+  console.log(`Configured to connect to Rynly server at ${RYNLY_SERVER_URL}`);
 
   app.listen(EXPRESS_PORT, () => {
     console.log(`Express server started on port ${EXPRESS_PORT}`);
