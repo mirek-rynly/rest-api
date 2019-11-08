@@ -12,46 +12,24 @@ exports.GET_VALIDATOR = [
 ];
 
 exports.getValidatedNumber = (req, res, next) => {
-
-  // HACK: since called uses callbacks instead of async, we need to wrap in an anonymous call
-  (async (_req, _res, _next) => {
-    let inputPhone = _req.query["phone-number"];
-    let authToken = req.headers.authorization.trim();
-    let axiosRes;
-    try {
-      axiosRes = await rynlyServerPhoneValidation(authToken, inputPhone);
-    } catch(axiosErr) {
-      // something went wrong with the request itself (e.g. authentication failed)
-      console.error("Phone validation request failure:");
-      console.error(axiosErr);
-      let err = new Error("Internal error validating phone number");
-      _next(err);
-    }
-    _res.send(axiosRes.data);
-  })(req, res, next);
-};
-
-// HACK: exporting since this is an easy way to check that we have a legit token
-// careful, this function might throw an exception!
-let rynlyServerPhoneValidation = async (authToken, inputPhone) => {
+  let inputPhone = req.query["phone-number"];
+  let authToken = req.headers.authorization.trim();
   const url = `${RYNLY_SERVER_URL}/api/user/validatePhone`;
   let options = {
-    params: {
-      phone: inputPhone
-    },
-    headers: {
-      Authorization: authToken // careful, auth token can't be url encoded!
-    }
+    params: { phone: inputPhone },
+    headers: { Authorization: authToken }
   };
 
   // Note that even if the phone number fails to validate, the REQUEST will still
   // succeed and return a 200. We'll need to view the response contents to determine
   // whether or not the phone number is valid.
   console.log(`Making phone validation GET request to '${url}' with options ${JSON.stringify(options)}`);
-  let axiosRes = await axios.get(url, options);
-  console.log("Phone validation response:");
-  console.log(axiosRes.data);
-  return axiosRes;
+  axios.get(url, options).then(axiosRes => {
+    console.log('got" _' + JSON.stringify(axiosRes.data))
+    res.json(axiosRes.data);
+  }).catch(axiosErr => {
+    console.error(axiosErr);
+    let err = new Error("Internal error validating phone number");
+    next(err);
+  });
 };
-
-exports.rynlyServerPhoneValidation = rynlyServerPhoneValidation;
