@@ -75,22 +75,18 @@ apiRouter.use((req, res, next) => {
 
   // HACK: get profile as an authorization test
   let token = authHeader.trim();
-  (async (_token, _next) => {
-    try {
-      console.log("Validating user");
-      let axiosRes = await users._getUserProfile(_token);
-    } catch(axiosErr) {
+  console.log("Validating token by fetching user");
+  users._getUserProfile(token)
+    .then(_ => next())
+    .catch(axiosErr => {
       console.error(axiosErr);
-      let _err = new Error("token authentication failed");
-      _err.statusCode = 401; // authentication error
-      _next(_err);
-    }
-    _next();
-  })(token, next);
+      let err = new Error("token authentication failed");
+      err.statusCode = 401; // authentication error
+      next(err);
+    });
 });
 
 // GET /user (TEMP)
-// TODO: just use user route for auth, above
 apiRouter.get("/user", users.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   users.getUserProfile(req, res, next);
