@@ -1,11 +1,8 @@
 /* jshint node: true */
 "use strict";
 
+const { MONGO_URL, DB_NAME } = require("./config.js");
 let { MongoClient } = require("mongodb");
-
-const MONGO_URL = process.env.MONGO_URL; // mongodb://localhost:27017
-const DB_NAME = process.env.DB_NAME; // rynly
-
 let db = null;
 
 // Call to intilize the connection

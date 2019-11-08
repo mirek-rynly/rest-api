@@ -5,6 +5,8 @@ require("log-timestamp");
 let axios = require("axios");
 let ev = require("express-validator");
 
+const { RYNLY_SERVER_URL } = require("../config.js");
+
 exports.GET_VALIDATOR = [
   ev.query("phone-number").exists().withMessage("required param missing")
 ];
@@ -32,7 +34,7 @@ exports.getValidatedNumber = (req, res, next) => {
 // HACK: exporting since this is an easy way to check that we have a legit token
 // careful, this function might throw an exception!
 let rynlyServerPhoneValidation = exports.rynlyServerPhoneValidation = async (authToken, inputPhone) => {
-  const url = 'https://uatuser.rynly.com/api/user/validatePhone';
+  const url = `${RYNLY_SERVER_URL}/api/user/validatePhone`;
   let options = {
     params: {
       phone: inputPhone

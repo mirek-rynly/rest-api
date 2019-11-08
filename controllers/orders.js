@@ -7,6 +7,8 @@ let ev = require("express-validator");
 let moment = require("moment-timezone");
 let utils = require("../utils.js");
 
+const { RYNLY_SERVER_URL } = require("../config.js");
+
 // TODO: still need to validate that the "from" and "to" zip codes are in the service
 // area, as this info is used for package creation
 exports.orderRequestValidator = () => {
@@ -51,8 +53,7 @@ exports.postOrder = (req, res, next) => {
   };
 
   // THE REST REQUEST
-  const url = 'https://uatuser.rynly.com/api/package/createmultiplepackage';
-  // const url = 'http://localhost:8082/api/package/createmultiplepackage';
+  const url = `${RYNLY_SERVER_URL}/api/package/createmultiplepackage`;
   let authToken = req.headers.authorization.trim();
   let options = {
     headers: {
