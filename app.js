@@ -77,7 +77,8 @@ apiRouter.use((req, res, next) => {
 
   // HACK: phone validation call is inexpensive and requires auth,
   // so we'll use that to make sure we're authorized
-  (async (_token, _next) => {
+  // TODO: switch to user call
+  (async (_token, _next) => { // TODO: do we need async keyword here?
     try {
       console.log("Using phone validation to confirm auth");
       let axiosRes = await phone.rynlyServerPhoneValidation(_token, "971-222-6649");
@@ -93,12 +94,12 @@ apiRouter.use((req, res, next) => {
   })(token, next);
 });
 
-// GET /user-id (TEMP)
-apiRouter.get("/user-id", users.GET_VALIDATOR, (req, res, next) => {
-  if (validationErrors(req, res)) return;
-  users.getUserId(req, res, next);
-});
-
+// GET /user (TEMP)
+// TODO: just use user route for auth, above
+// apiRouter.get("/user", users.GET_VALIDATOR, (req, res, next) => {
+//   if (validationErrors(req, res)) return;
+//   users.getUserProfile(req, res, next);
+// });
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
 apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {

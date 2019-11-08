@@ -25,14 +25,12 @@ exports.orderRequestValidator = () => {
   return validator;
 };
 
-exports.postOrder = (req, res, next) => {
+let postOrder = (req, res, next) => {
   let size = req.body.size;
   let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
   let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
-  let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO don't hardcode
 
   let packageModel = {
-    "UserId": userID, // TODO don't hardcode
     "recipient": {
       "note": deliveryNote,
       "isSignatureRequired": false
@@ -53,20 +51,16 @@ exports.postOrder = (req, res, next) => {
   };
 
   // THE REST REQUEST
-  const url = `${RYNLY_SERVER_URL}/api/package/createmultiplepackage`;
   let authToken = req.headers.authorization.trim();
-  let options = {
-    headers: {
-      Authorization: authToken
-    },
-  };
+  const url = `${RYNLY_SERVER_URL}/api/package/createmultiplepackage`;
+  let options = { headers: { Authorization: authToken } };
 
   let payload = {
     packageCreateModels: [packageModel],
     promoCode: ""
   };
 
-  console.log(`Making package creation request to '${url}' with options ${JSON.stringify(options)}`);
+  console.log(`Making package creation POST request to '${url}' with options ${JSON.stringify(options)}`);
   axios.post(url, payload, options)
     .then((innerRes) => {
       console.log("Package creation response:");
@@ -101,7 +95,7 @@ exports.postOrder = (req, res, next) => {
 };
 
 
-function addressValidation(addressType) {
+let addressValidation = (addressType) => {
   let validator = [];
   let requiredFields = ["line-1", "city", "state", "zip", "contact-name", "phone"];
   requiredFields.push("coordinates", "coordinates.latitude", "coordinates.longitude");
@@ -126,7 +120,7 @@ function addressValidation(addressType) {
   validator.push(ev.body(`${addressType}.coordinates.longitude`).isDecimal().withMessage("not a valid decimal"));
 
   return validator;
-}
+};
 
 // the given request should include both a "from-address" and "to-address", with
 // formatting as defined by our external-facing API.
