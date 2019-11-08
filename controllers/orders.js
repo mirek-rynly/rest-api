@@ -4,6 +4,7 @@
 require("log-timestamp");
 let axios = require("axios");
 let ev = require("express-validator");
+let moment = require("moment-timezone");
 let utils = require("../utils.js");
 
 // TODO: still need to validate that the "from" and "to" zip codes are in the service
@@ -29,6 +30,7 @@ exports.postOrder = (req, res, next) => {
   let userID = "cdacc808-1efa-47e7-9a50-a78aa0801efb"; // TODO don't hardcode
 
   let packageModel = {
+    "UserId": userID, // TODO don't hardcode
     "recipient": {
       "note": deliveryNote,
       "isSignatureRequired": false
@@ -37,19 +39,20 @@ exports.postOrder = (req, res, next) => {
     "toAddress": internalApiAddress(req, "to-address"),
     "isExpedited": false,
     "promoCode": "",
+    "promoCodeId": "",
     "sourceHub": {}, // it looks hubs get reset server side once we make the call
     "destinationHub": {},
+    "deliveryMethodId": 2, // 2 is pickup and 1 is deliver
     "deliveryTimeId": 1, // based on prod db this is always a 1
+    "packagesCount": 1,
     "pickupNote": pickupNote,
     "discount": 0,
-    "UserId": userID,
-    "DeliveryMethodId": 2, // 2 is pickup and 1 is delivery
     "items": [utils.sizeToItemObj(size)],
-    "promoCodeId": ""
   };
 
   // THE REST REQUEST
   const url = 'https://uatuser.rynly.com/api/package/createmultiplepackage';
+  // const url = 'http://localhost:8082/api/package/createmultiplepackage';
   let authToken = req.headers.authorization.trim();
   let options = {
     headers: {
@@ -58,7 +61,8 @@ exports.postOrder = (req, res, next) => {
   };
 
   let payload = {
-    packageCreateModels: [packageModel]
+    packageCreateModels: [packageModel],
+    promoCode: ""
   };
 
   console.log(`Making package creation request to '${url}' with options ${JSON.stringify(options)}`);
@@ -79,9 +83,13 @@ exports.postOrder = (req, res, next) => {
 
       let packageObj = innerRes.data.data.packageResponseList[0].package;
 
+      // DB stores dates in UTC, convert to Pacific
+      let dbDueDatetime = packageObj.dueDate;
+      let dueDatePacific = moment(dbDueDatetime).tz('America/Los_Angeles').format("YYYY-MM-DD");
+
       res.send({
         "tracking-number": packageObj.trackingNumber,
-        "due-date": packageObj.dueDate,
+        "due-date": dueDatePacific,
         "label-url": innerRes.data.data.packageResponseList[0].labelUrl // yea, not part of ".package"
       });
     })

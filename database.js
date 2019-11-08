@@ -3,15 +3,14 @@
 
 let { MongoClient } = require("mongodb");
 
-const MONGO_URL = "mongodb://localhost:27017";
-const MONGO_PARAMS = {useNewUrlParser: true, useUnifiedTopology: true};
-const DB_NAME = "rynly";
+const MONGO_URL = process.env.MONGO_URL;
+const DB_NAME = process.env.MONGO_URL;
 
 let db = null;
 
 // Call to intilize the connection
 module.exports.connect =  async () => {
-  let client = await MongoClient.connect(MONGO_URL, MONGO_PARAMS);
+  let client = await MongoClient.connect(MONGO_URL, {useNewUrlParser: true, useUnifiedTopology: true});
   db = client.db(DB_NAME);
   console.log(`Connection to database ${DB_NAME} at ${MONGO_URL} successful`);
 
