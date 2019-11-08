@@ -3,8 +3,8 @@
 
 let { MongoClient } = require("mongodb");
 
-const MONGO_URL = process.env.MONGO_URL;
-const DB_NAME = process.env.MONGO_URL;
+const MONGO_URL = process.env.MONGO_URL; // mongodb://localhost:27017
+const DB_NAME = process.env.DB_NAME; // rynly
 
 let db = null;
 

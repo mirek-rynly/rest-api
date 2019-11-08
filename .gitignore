@@ -1,8 +1,4 @@
-# on-disk webhook "database"
-local-storage/
-
-
-# AUTO-GENERATE (BY ELASTIC BEANSTALK?)
+# AUTO-GENERATED (BY ELASTIC BEANSTALK?)
 
 # Logs
 logs

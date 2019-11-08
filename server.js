@@ -2,6 +2,7 @@
 "use strict";
 
 require("log-timestamp");
+require('dotenv').config();
 let express = require('express');
 
 let utils = require("./utils.js");
