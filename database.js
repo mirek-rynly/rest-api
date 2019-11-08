@@ -18,6 +18,9 @@ module.exports.connect =  async () => {
 
   // check to make sure we have read access
   let collections = await db.listCollections().toArray();
+  if (collections.length === 0) {
+    throw new Error("Collections query returned empty list");
+  }
   console.log(`Collections: '${collections.map(c => c.name)}'`);
   return db;
 };
