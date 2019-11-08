@@ -10,9 +10,11 @@ let db = null;
 
 // Call to intilize the connection
 module.exports.connect =  async () => {
+
+  console.log(`Connecting to database '${DB_NAME}' at '${MONGO_URL}'`);
   let client = await MongoClient.connect(MONGO_URL, {useNewUrlParser: true, useUnifiedTopology: true});
   db = client.db(DB_NAME);
-  console.log(`Connection to database ${DB_NAME} at ${MONGO_URL} successful`);
+  console.log("Connection succesful");
 
   // check to make sure we have read access
   let collections = await db.listCollections().toArray();
