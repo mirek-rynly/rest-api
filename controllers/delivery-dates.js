@@ -6,7 +6,7 @@ let ev = require("express-validator");
 let moment = require("moment-timezone");
 let utils = require("../utils.js");
 
-const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DD HH:MM:SS";
+const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
 exports.GET_VALIDATOR = [
   ev.query("from-zip").exists().withMessage("required param missing"),

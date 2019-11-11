@@ -17,6 +17,9 @@ let orders = require("./controllers/orders.js");
 let phone = require("./controllers/phone-validation.js");
 let webhooks = require("./controllers/webhooks.js");
 
+
+//////////////////// SETUP + MIDDLEWARE
+
 let app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -37,6 +40,28 @@ app.set('json replacer', function (key, value) {
 
 var apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
+
+// use as middleware for routes that require auth
+let authCheck = (req, res, next) => {
+  let authHeader = req.headers.authorization;
+  if (!authHeader) {
+    let err = new Error("no 'Authorization' header");
+    err.statusCode = 401; // authentication error
+    return next(err);
+  }
+
+  // HACK: get profile as an authorization test
+  let token = authHeader.trim();
+  console.log("Validating token by fetching user");
+  users._getUserProfile(token)
+    .then(_ => next())
+    .catch(axiosErr => {
+      console.error(axiosErr);
+      let err = new Error("token authentication failed");
+      err.statusCode = 401; // authentication error
+      next(err);
+    });
+};
 
 
 ////////////////////  ROUTES THAT DON'T NEED AUTH
@@ -60,52 +85,28 @@ apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) =>
 });
 
 
-////////////////////  ROUTES THAT NEED AUTH
-
-// auth midleware
-
-// TODO: add as middle just to routes that need it, otherwise bad requests will hit this and seem like good ones
-apiRouter.use((req, res, next) => {
-  let authHeader = req.headers.authorization;
-  if (!authHeader) {
-    let err = new Error("no 'Authorization' header");
-    err.statusCode = 401; // authentication error
-    return next(err);
-  }
-
-  // HACK: get profile as an authorization test
-  let token = authHeader.trim();
-  console.log("Validating token by fetching user");
-  users._getUserProfile(token)
-    .then(_ => next())
-    .catch(axiosErr => {
-      console.error(axiosErr);
-      let err = new Error("token authentication failed");
-      err.statusCode = 401; // authentication error
-      next(err);
-    });
-});
+//////////////////// ROUTES THAT NEED AUTH
 
 // GET /user (TEMP)
-apiRouter.get("/user", users.GET_VALIDATOR, (req, res, next) => {
+apiRouter.get("/user", authCheck, users.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   users.getUserProfile(req, res, next);
 });
 
 // GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
-apiRouter.get("/validated-phone-number", phone.GET_VALIDATOR, (req, res, next) => {
+apiRouter.get("/validated-phone-number", authCheck, phone.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   phone.getValidatedNumber(req, res, next);
 });
 
 // GET /package/:trackingNumber
-apiRouter.get("/package/:trackingNumber", packages.PACKAGE_REQUEST_VALIDATOR, (req, res, next) => {
+apiRouter.get("/package/:trackingNumber", authCheck, packages.PACKAGE_REQUEST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   packages.getPackage(req, res, next);
 });
 
 // POST /package-order
-apiRouter.post("/package-order", orders.orderRequestValidator(), (req, res, next) => {
+apiRouter.post("/package-order", authCheck, orders.orderRequestValidator(), (req, res, next) => {
   if (validationErrors(req, res)) return;
   orders.postOrder(req, res, next);
 });
@@ -114,35 +115,34 @@ apiRouter.post("/package-order", orders.orderRequestValidator(), (req, res, next
 //////////////////// WEBHOOKS
 
 // GET /webhooks/
-apiRouter.get("/webhooks", webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
+apiRouter.get("/webhooks", authCheck, webhooks.GET_ALL_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getAllWebhooks(req, res, next);
 });
 
 // GET /webhook/:trackingNumber/
-apiRouter.get("/webhook/:trackingNumber", webhooks.GET_VALIDATOR, (req, res, next) => {
+apiRouter.get("/webhook/:trackingNumber", authCheck, webhooks.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.getWebhook(req, res, next);
 });
 
 // POST /webhook/
-apiRouter.post("/webhook", webhooks.POST_VALIDATOR, (req, res, next) => {
+apiRouter.post("/webhook", authCheck, webhooks.POST_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.postWebhook(req, res, next);
 });
 
 // DELETE /webhook/:trackingNumber/
-apiRouter.delete("/webhook/:trackingNumber", webhooks.DELETE_VALIDATOR, (req, res, next) => {
+apiRouter.delete("/webhook/:trackingNumber", authCheck, webhooks.DELETE_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.deleteWebhook(req, res, next);
 });
 
 // POST /webhook/trigger/
-apiRouter.post("/webhook/trigger/", webhooks.TRIGGER_VALIDATOR, (req, res, next) => {
+apiRouter.post("/webhook/trigger/", authCheck, webhooks.TRIGGER_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   webhooks.triggerWebhook(req, res, next);
 });
-
 
 // error catching middleware, meant to catch generic exceptions (ie the `err` object)
 // special error responses (e.g validation errors) might be handled independently,
@@ -158,7 +158,7 @@ apiRouter.use((err, req, res, next) => {
 });
 
 
-// HELPERS
+//////////////////// HELPERS
 
 // validation errors are handled manually (instead of using our error catching middleware),
 // since we might have multiple error objects we want to return
