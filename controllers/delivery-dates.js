@@ -20,10 +20,10 @@ exports.GET_VALIDATOR = [
 ];
 
 exports.getDeliveredByDate = (req, res, next) => {
-  let fromZip = req.query["from_zip"];
-  let toZip = req.query["to_zip"];
-  let isExpeditedStr = req.query["is_expedited"];
-  let creationDatetimeParam = req.query["order_creation_datetime"];
+  let fromZip = req.query.from_zip;
+  let toZip = req.query.to_zip;
+  let isExpeditedStr = req.query.is_expedited;
+  let creationDatetimeParam = req.query.order_creation_datetime;
 
   let creationMomentPacific;
   if (creationDatetimeParam) {
@@ -42,7 +42,7 @@ exports.getDeliveredByDate = (req, res, next) => {
 
   res.json({
     msg: msg,
-    "due-date": getDueDate(isExpedited, isLocal, creationMomentPacific)
+    "due_date": getDueDate(isExpedited, isLocal, creationMomentPacific)
   });
 };
 
@@ -94,7 +94,7 @@ let addBusinessDays = (dateStr, daysToAdd) => {
     return tomorrowStr;
   }
 
-  return addBusinessDays(tomorrowStr, daysToAdd _ 1);
+  return addBusinessDays(tomorrowStr, daysToAdd - 1);
 };
 
 let isFridayOrSaturday = (dateStr) => {

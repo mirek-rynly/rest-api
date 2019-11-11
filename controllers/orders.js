@@ -145,7 +145,7 @@ let internalApiAddress = (req, addressType) => {
       "longitude": req.body[addressType].coordinates.longitude
     },
     "company": req.body[addressType].company,
-    "contactName": req.body[addressType]["contact_name"],
+    "contactName": req.body[addressType].contact_name,
     "phone": req.body[addressType].phone
   };
 };
