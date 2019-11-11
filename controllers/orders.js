@@ -25,7 +25,7 @@ exports.orderRequestValidator = () => {
   return validator;
 };
 
-let postOrder = (req, res, next) => {
+exports.postOrder = (req, res, next) => {
   let size = req.body.size;
   let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
   let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";

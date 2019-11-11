@@ -6,7 +6,7 @@ let ev = require("express-validator");
 let moment = require("moment-timezone");
 let utils = require("../utils.js");
 
-const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DDTHH:MM:SS";
+const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DD HH:MM:SS";
 
 exports.GET_VALIDATOR = [
   ev.query("from-zip").exists().withMessage("required param missing"),
@@ -14,8 +14,8 @@ exports.GET_VALIDATOR = [
   ev.query("is-expedited").exists().withMessage("required param missing").bail()
     .isBoolean().withMessage("must be one of [true,false]"),
   ev.query("order-creation-datetime").optional()
-    .custom(dateStr => dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+$/))
-      .withMessage("ISO8601 date must include time and may not include timezone (we assume pacific)").bail()
+    .custom(dateStr => dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$/))
+      .withMessage("ISO8601 date must include time and be in UTC (e.g. 2019-10-28T06:00:00Z)").bail()
     .isISO8601().withMessage("illegal date value, must be ISO8601")
 ];
 
@@ -25,31 +25,31 @@ exports.getDeliveredByDate = (req, res, next) => {
   let isExpeditedStr = req.query["is-expedited"];
   let creationDatetimeParam = req.query["order-creation-datetime"];
 
-  let creationMoment;
+  let creationMomentPacific;
   if (creationDatetimeParam) {
-    creationMoment = moment(creationDatetimeParam).tz('America/Los_Angeles');
+    creationMomentPacific = moment(creationDatetimeParam).tz('America/Los_Angeles');
   } else {
-    creationMoment = moment().tz('America/Los_Angeles'); // "now" in Pacific
+    creationMomentPacific = moment().tz('America/Los_Angeles'); // "now" in Pacific
   }
 
   let isLocal = (isPortlandZip(fromZip) === isPortlandZip(toZip));
   let isExpedited = (isExpeditedStr === "true");
 
-  // e.g. "end of day due date for order placed at given time (2019-10-28T13:00:00 Pacific)"
+  // e.g. "end of day due date for order placed at given time (2019-10-28T06:00:00Z)"
   let whenPlaced = creationDatetimeParam ? "at given time" : "now";
-  let creationMomentStr = creationMoment.format(DATETIME_DISPLAY_FORMAT);
-  let msg = `end of day due date for order placed ${whenPlaced} (${creationMomentStr} Pacific)`;
+  let prettyOrderTime = creationMomentPacific.format(DATETIME_DISPLAY_FORMAT);
+  let msg = `end of day due date for order placed ${whenPlaced} (${prettyOrderTime} Pacific)`;
 
   res.json({
     msg: msg,
-    "due-date": getDueDate(isExpedited, isLocal, creationMoment)
+    "due-date": getDueDate(isExpedited, isLocal, creationMomentPacific)
   });
 };
 
 // HELPERS
 
-let getDueDate = (isExpedited, isLocal, creationMoment) => {
-  let creationDateStr = creationMoment.format("YYYY-MM-DD");
+let getDueDate = (isExpedited, isLocal, creationMomentPacific) => {
+  let creationDateStr = creationMomentPacific.format("YYYY-MM-DD");
 
   // non-expedited always 3 days
   if (!isExpedited) {
@@ -57,7 +57,7 @@ let getDueDate = (isExpedited, isLocal, creationMoment) => {
   }
 
   // local expedited before 11 is same day
-  if (isLocal && creationMoment.hours() < 11) {
+  if (isLocal && creationMomentPacific.hours() < 11) {
     return creationDateStr;
   }
 

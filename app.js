@@ -53,7 +53,7 @@ apiRouter.get("/pricing", pricing.GET_VALIDATOR, (req, res, next) => {
   pricing.getPricing(req, res, next);
 });
 
-// GET /delivered-by-date?order-creation-timestamp=2019-02-25T12:39:45Z (param is optional)
+// GET /delivery-date?order-creation-timestamp=2019-02-25T12:39:45Z (param is optional)
 apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   deliveryDates.getDeliveredByDate(req, res, next);
@@ -104,8 +104,8 @@ apiRouter.get("/package/:trackingNumber", packages.PACKAGE_REQUEST_VALIDATOR, (r
   packages.getPackage(req, res, next);
 });
 
-// POST /new-order
-apiRouter.post("/new-order", orders.orderRequestValidator(), (req, res, next) => {
+// POST /package-order
+apiRouter.post("/package-order", orders.orderRequestValidator(), (req, res, next) => {
   if (validationErrors(req, res)) return;
   orders.postOrder(req, res, next);
 });

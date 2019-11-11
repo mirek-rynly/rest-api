@@ -14,6 +14,9 @@ const EXPRESS_PORT = 8081;
 
 // connect to mongo and start server
 let runServer = async () => {
+  // TODO: test that we can connect to Rynly server
+  console.log(`Configured to connect to Rynly server at ${RYNLY_SERVER_URL}`);
+
   try {
     await mongoDB.connect();
   } catch(err) {
@@ -27,9 +30,6 @@ let runServer = async () => {
     console.error("Couldn't connecto to on-disk JSON db: ", err);
     process.exit(1);
   }
-
-  // TODO: test that we can connect to Rynly server
-  console.log(`Configured to connect to Rynly server at ${RYNLY_SERVER_URL}`);
 
   app.listen(EXPRESS_PORT, () => {
     console.log(`Express server started on port ${EXPRESS_PORT}`);
