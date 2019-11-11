@@ -3,6 +3,7 @@
 
 require("log-timestamp");
 let ev = require("express-validator");
+let moment = require("moment-timezone");
 let utils = require("../utils.js");
 let database = require("../database.js");
 
@@ -53,8 +54,8 @@ exports.getPackage = (req, res, next) => {
     // external-facing address format
     let externalApiAddress = (dbAddress) => {
       return {
-        "line_1": dbAddress.Line1,
-        "line_2": dbAddress.Line2,
+        line_1: dbAddress.Line1,
+        line_2: dbAddress.Line2,
         state: dbAddress.State,
         city: dbAddress.City,
         zip: dbAddress.Zip,
@@ -63,7 +64,7 @@ exports.getPackage = (req, res, next) => {
           longitude: dbAddress.Location.coordinates[0]
         },
         company: dbAddress.Company,
-        "contact_name": dbAddress.ContactName,
+        contact_name: dbAddress.ContactName,
         phone: dbAddress.Phone
       };
     };
@@ -85,6 +86,10 @@ exports.getPackage = (req, res, next) => {
       return externalChanges;
     };
 
+    // due date is stored as a UTC timestamp (e.g 2019-11-14T22:10:41.183Z)
+    // we need to convert to a YYYY-MM-DD date (in Pacific)
+    let dueDatePacific = moment(dbPackage.DueDate).tz('America/Los_Angeles').format("YYYY-MM-DD");
+
     // e.g. "/package/label/23d58b12-5542-4920-99fa-f072509df92b"
     let labelUrl = `/package/label/${dbPackage._id}`;
 
@@ -92,12 +97,12 @@ exports.getPackage = (req, res, next) => {
       "date_created": dbPackage.DateCreated,
       "tracking_number": dbPackage.TrackingNumber,
       "size": packageSize(dbPackage),
+      "is_expedited": dbPackage.IsExpedited,
       "from_address": externalApiAddress(dbPackage.From),
       "to_address": externalApiAddress(dbPackage.To),
-      "is_expedited": dbPackage.IsExpedited,
       "pickup_note": dbPackage.PickupNote,
       "delivery_note": dbPackage.Recipient.Note,
-      "due_date": dbPackage.DueDate,
+      "due_date": dueDatePacific,
       "current_status": utils.PACKAGE_STATUS_MAP[dbPackage.Status],
       "status_changes": externalStatusChanges(dbPackage),
       "label_url": labelUrl,
