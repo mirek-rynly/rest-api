@@ -8,7 +8,6 @@ let database = require("../database.js");
 
 exports.PACKAGE_REQUEST_VALIDATOR = [
   ev.param("trackingNumber").exists().withMessage("required param missing").bail()
-    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string")
 ];
 
@@ -26,7 +25,7 @@ exports.getPackage = (req, res, next) => {
       "Items": 1, // how we'll determine "size"
       "IsExpedited": 1,
       "PickupNote": 1,
-      "DeliveryNote": 1,
+      "Recipient.Note": 1,
       "DueDate": 1,
       "Status": 1,
       "Changes": 1
@@ -97,7 +96,7 @@ exports.getPackage = (req, res, next) => {
       "size": packageSize(dbPackage),
       "is-expedited": dbPackage.IsExpedited,
       "pickup-note": dbPackage.PickupNote,
-      "delivery-note": dbPackage.DeliveryNote,
+      "delivery-note": dbPackage.Recipient.Note,
       "due-date": dbPackage.DueDate,
       "current-status": utils.PACKAGE_STATUS_MAP[dbPackage.Status],
       "status-changes": externalStatusChanges(dbPackage),
