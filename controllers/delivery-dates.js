@@ -41,8 +41,8 @@ exports.getDeliveredByDate = (req, res, next) => {
   let msg = `end of day due date for order placed ${whenPlaced} (${prettyOrderTime} Pacific)`;
 
   res.json({
-    msg: msg,
-    "due_date": getDueDate(isExpedited, isLocal, creationMomentPacific)
+    "due_date": getDueDate(isExpedited, isLocal, creationMomentPacific),
+    msg: msg
   });
 };
 

@@ -91,9 +91,9 @@ exports.getPackage = (req, res, next) => {
     res.json({
       "date_created": dbPackage.DateCreated,
       "tracking_number": dbPackage.TrackingNumber,
+      "size": packageSize(dbPackage),
       "from_address": externalApiAddress(dbPackage.From),
       "to_address": externalApiAddress(dbPackage.To),
-      "size": packageSize(dbPackage),
       "is_expedited": dbPackage.IsExpedited,
       "pickup_note": dbPackage.PickupNote,
       "delivery_note": dbPackage.Recipient.Note,

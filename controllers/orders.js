@@ -15,6 +15,8 @@ exports.orderRequestValidator = () => {
   let validator = [
     ev.body("size").exists().withMessage("required param missing").bail()
       .isIn(utils.PACKAGE_SIZES).withMessage(`must be one of [${utils.PACKAGE_SIZES}]`),
+    ev.body("is_expedited").exists().withMessage("required param missing").bail()
+      .isBoolean().withMessage("must be one of [true,false]"),
     ev.body("pickup_note").if(ev.body("pickup_note").exists())
       .isLength({max: 90}).withMessage("max length is 90"),
     ev.body("delivery_note").if(ev.body("delivery_note").exists())
@@ -27,8 +29,19 @@ exports.orderRequestValidator = () => {
 
 exports.postOrder = (req, res, next) => {
   let size = req.body.size;
+  let isExpeditedRaw = req.body.is_expedited;
   let pickupNote = req.body.pickup_note ? req.body.pickup_note : "";
   let deliveryNote = req.body.delivery_note ? req.body.delivery_note : "";
+
+  let isExpeditedBool;
+  if (typeof isExpeditedRaw === "string") {
+    isExpeditedBool = (isExpeditedRaw === "true" ? true : false);
+  } else if (typeof isExpeditedRaw === "boolean") {
+    isExpeditedBool = isExpeditedRaw;
+  } else {
+    let err = new Error(`Unexpected type for is_expedited parameter: '${typeof isExpeditedRaw}'`);
+    next(err);
+  }
 
   let packageModel = {
     "recipient": {
@@ -37,7 +50,7 @@ exports.postOrder = (req, res, next) => {
     },
     "fromAddress": internalApiAddress(req, "from_address"),
     "toAddress": internalApiAddress(req, "to_address"),
-    "isExpedited": false,
+    "isExpedited": isExpeditedBool,
     "promoCode": "",
     "promoCodeId": "",
     "sourceHub": {}, // it looks hubs get reset server side once we make the call
@@ -50,7 +63,7 @@ exports.postOrder = (req, res, next) => {
     "items": [utils.sizeToItemObj(size)],
   };
 
-  // THE REST REQUEST
+  // THE INTERNAL REST REQUEST
   let authToken = req.headers.authorization.trim();
   const url = `${RYNLY_SERVER_URL}/api/package/createmultiplepackage`;
   let options = { headers: { Authorization: authToken } };
@@ -129,7 +142,7 @@ let addressValidation = (addressType) => {
 // as given by Rynly.Platform.Shared.Models.Address)
 let internalApiAddress = (req, addressType) => {
   if (addressType !== "from_address" && addressType !== "to_address") {
-    throw new Error("Unexpected addressType " + addressType);
+    throw new Error("Unexpected addressressType " + addressType);
   }
 
   // CAREFUL: our client-facing API uses dash-case for parameters,
