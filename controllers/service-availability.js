@@ -7,13 +7,13 @@ let database = require("../database.js");
 let utils = require("../utils.js");
 
 exports.GET_VALIDATOR = [
-  ev.query("from-zip").exists().withMessage("required param missing"),
-  ev.query("to-zip").exists().withMessage("required param missing")
+  ev.query("from_zip").exists().withMessage("required param missing"),
+  ev.query("to_zip").exists().withMessage("required param missing")
 ];
 
 exports.getServiceAvailability = (res, req, next) => {
-  let fromZip = req.query["from-zip"];
-  let toZip = req.query["to-zip"];
+  let fromZip = req.query.from_zip;
+  let toZip = req.query.to_zip;
 
   let db = database.get();
   let fromZipQuery = {"ZipZones.ZipCode": fromZip, "ZipZones": {$exists: true, $ne: null}};
@@ -27,9 +27,9 @@ exports.getServiceAvailability = (res, req, next) => {
     }
 
     let fromHubNames = fromHubs.map(hub => hub.Code);
-    console.log(`Hubs servicing from-zip '${fromZip}': ${JSON.stringify(fromHubNames)}`);
+    console.log(`Hubs servicing from_zip '${fromZip}': ${JSON.stringify(fromHubNames)}`);
     if (fromHubs.length === 0) {
-      return res.json({ service_availability: false });
+      return res.json({ "service_availability": false });
     }
 
     let destZipQuery = {"ZipZones.ZipCode": toZip, "ZipZones": {$exists: true, $ne: null}};
@@ -38,13 +38,13 @@ exports.getServiceAvailability = (res, req, next) => {
         return next(err);
       }
       let toHubNames = toHubs.map(hub => hub.Code);
-      console.log(`Hubs servicing to-zip '${toZip}': ${JSON.stringify(toHubNames)}`);
+      console.log(`Hubs servicing to_zip '${toZip}': ${JSON.stringify(toHubNames)}`);
 
       if (toHubs.length === 0) {
-        return res.json({ service_availability: false });
+        return res.json({ "service_availability": false });
       }
 
-      res.json({ service_availability: true });
+      res.json({ "service_availability": true });
     });
   });
 };

@@ -9,21 +9,21 @@ let utils = require("../utils.js");
 const DATETIME_DISPLAY_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
 exports.GET_VALIDATOR = [
-  ev.query("from-zip").exists().withMessage("required param missing"),
-  ev.query("to-zip").exists().withMessage("required param missing"),
-  ev.query("is-expedited").exists().withMessage("required param missing").bail()
+  ev.query("from_zip").exists().withMessage("required param missing"),
+  ev.query("to_zip").exists().withMessage("required param missing"),
+  ev.query("is_expedited").exists().withMessage("required param missing").bail()
     .isBoolean().withMessage("must be one of [true,false]"),
-  ev.query("order-creation-datetime").optional()
+  ev.query("order_creation_datetime").optional()
     .custom(dateStr => dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$/))
       .withMessage("ISO8601 date must include time and be in UTC (e.g. 2019-10-28T06:00:00Z)").bail()
     .isISO8601().withMessage("illegal date value, must be ISO8601")
 ];
 
 exports.getDeliveredByDate = (req, res, next) => {
-  let fromZip = req.query["from-zip"];
-  let toZip = req.query["to-zip"];
-  let isExpeditedStr = req.query["is-expedited"];
-  let creationDatetimeParam = req.query["order-creation-datetime"];
+  let fromZip = req.query["from_zip"];
+  let toZip = req.query["to_zip"];
+  let isExpeditedStr = req.query["is_expedited"];
+  let creationDatetimeParam = req.query["order_creation_datetime"];
 
   let creationMomentPacific;
   if (creationDatetimeParam) {
@@ -94,7 +94,7 @@ let addBusinessDays = (dateStr, daysToAdd) => {
     return tomorrowStr;
   }
 
-  return addBusinessDays(tomorrowStr, daysToAdd - 1);
+  return addBusinessDays(tomorrowStr, daysToAdd _ 1);
 };
 
 let isFridayOrSaturday = (dateStr) => {

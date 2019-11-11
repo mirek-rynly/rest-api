@@ -6,11 +6,11 @@ let ev = require("express-validator");
 let utils = require("../utils.js");
 
 exports.GET_VALIDATOR = [
-  ev.query("is-expedited").optional().isBoolean().withMessage("must be one of [true,false]"),
+  ev.query("is_expedited").optional().isBoolean().withMessage("must be one of [true,false]"),
   ev.query("size").optional().isIn(utils.PACKAGE_SIZES).withMessage(`must be one of [${utils.PACKAGE_SIZES}]`)
 ];
 exports.getPricing = (req, res, next) => {
-  let isExpeditedFilter = req.query["is-expedited"]; // careful, this is a string, not a boolean
+  let isExpeditedFilter = req.query.is_expedited; // careful, this is a string, not a boolean
   let sizeFilter = req.query.size;
 
   let sizes = sizeFilter ? [sizeFilter] : utils.PACKAGE_SIZES;
@@ -21,7 +21,7 @@ exports.getPricing = (req, res, next) => {
     for (let size of sizes) {
       pricing.push({
         size: size,
-        "is-expedited": isExpeditedStr,
+        "is_expedited": isExpeditedStr,
         price: getPackagePrice(size, isExpeditedStr),
         currency: "USD"
       });

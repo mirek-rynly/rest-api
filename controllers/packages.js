@@ -12,7 +12,7 @@ exports.PACKAGE_REQUEST_VALIDATOR = [
 ];
 
 exports.getPackage = (req, res, next) => {
-  // CAREFUL: unlike client-facing query parameters (e.g. /route?query-param=X),
+  // CAREFUL: unlike client-facing query parameters (e.g. /route?query_param=X),
   // internal routes parameter names (e.g /route/:routeParamName) can't have dashes
   let trackingNumber = req.params.trackingNumber;
   let db = database.get();
@@ -53,8 +53,8 @@ exports.getPackage = (req, res, next) => {
     // external-facing address format
     let externalApiAddress = (dbAddress) => {
       return {
-        "line-1": dbAddress.Line1,
-        "line-2": dbAddress.Line2,
+        "line_1": dbAddress.Line1,
+        "line_2": dbAddress.Line2,
         state: dbAddress.State,
         city: dbAddress.City,
         zip: dbAddress.Zip,
@@ -63,7 +63,7 @@ exports.getPackage = (req, res, next) => {
           longitude: dbAddress.Location.coordinates[0]
         },
         company: dbAddress.Company,
-        "contact-name": dbAddress.ContactName,
+        "contact_name": dbAddress.ContactName,
         phone: dbAddress.Phone
       };
     };
@@ -89,18 +89,18 @@ exports.getPackage = (req, res, next) => {
     let labelUrl = `/package/label/${dbPackage._id}`;
 
     res.json({
-      "date-created": dbPackage.DateCreated,
-      "tracking-number": dbPackage.TrackingNumber,
-      "from-address": externalApiAddress(dbPackage.From),
-      "to-address": externalApiAddress(dbPackage.To),
+      "date_created": dbPackage.DateCreated,
+      "tracking_number": dbPackage.TrackingNumber,
+      "from_address": externalApiAddress(dbPackage.From),
+      "to_address": externalApiAddress(dbPackage.To),
       "size": packageSize(dbPackage),
-      "is-expedited": dbPackage.IsExpedited,
-      "pickup-note": dbPackage.PickupNote,
-      "delivery-note": dbPackage.Recipient.Note,
-      "due-date": dbPackage.DueDate,
-      "current-status": utils.PACKAGE_STATUS_MAP[dbPackage.Status],
-      "status-changes": externalStatusChanges(dbPackage),
-      "label-url": labelUrl,
+      "is_expedited": dbPackage.IsExpedited,
+      "pickup_note": dbPackage.PickupNote,
+      "delivery_note": dbPackage.Recipient.Note,
+      "due_date": dbPackage.DueDate,
+      "current_status": utils.PACKAGE_STATUS_MAP[dbPackage.Status],
+      "status_changes": externalStatusChanges(dbPackage),
+      "label_url": labelUrl,
     });
   });
 };

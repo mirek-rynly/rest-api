@@ -66,20 +66,20 @@ let authCheck = (req, res, next) => {
 
 ////////////////////  ROUTES THAT DON'T NEED AUTH
 
-// GET /service-availability?from-zip=97202&to-zip=97202
-apiRouter.get("/service-availability", availability.GET_VALIDATOR, (req, res, next) => {
+// GET /service_availability?from_zip=97202&to_zip=97202
+apiRouter.get("/service_availability", availability.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   availability.getServiceAvailability(res, req, next);
 });
 
-// GET /pricing?is-expedited=true&size=large (both params are optional)
+// GET /pricing?is_expedited=true&size=large (both params are optional)
 apiRouter.get("/pricing", pricing.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   pricing.getPricing(req, res, next);
 });
 
-// GET /delivery-date?order-creation-timestamp=2019-02-25T12:39:45Z (param is optional)
-apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) => {
+// GET /delivery_date?order_creation_timestamp=2019-02-25T12:39:45Z (param is optional)
+apiRouter.get("/delivery_date", deliveryDates.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   deliveryDates.getDeliveredByDate(req, res, next);
 });
@@ -87,14 +87,14 @@ apiRouter.get("/delivery-date", deliveryDates.GET_VALIDATOR, (req, res, next) =>
 
 //////////////////// ROUTES THAT NEED AUTH
 
-// GET /user (TEMP)
+// GET /user (TEMP, used for debugging)
 apiRouter.get("/user", authCheck, users.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   users.getUserProfile(req, res, next);
 });
 
-// GET /validated-phone-number?phone-number=+1 971 222 9649 ex1
-apiRouter.get("/validated-phone-number", authCheck, phone.GET_VALIDATOR, (req, res, next) => {
+// GET /validated_phone_number?phone_number=+1 971 222 9649 ex1
+apiRouter.get("/validated_phone_number", authCheck, phone.GET_VALIDATOR, (req, res, next) => {
   if (validationErrors(req, res)) return;
   phone.getValidatedNumber(req, res, next);
 });
@@ -105,8 +105,8 @@ apiRouter.get("/package/:trackingNumber", authCheck, packages.PACKAGE_REQUEST_VA
   packages.getPackage(req, res, next);
 });
 
-// POST /package-order
-apiRouter.post("/package-order", authCheck, orders.orderRequestValidator(), (req, res, next) => {
+// POST /package_order
+apiRouter.post("/package_order", authCheck, orders.orderRequestValidator(), (req, res, next) => {
   if (validationErrors(req, res)) return;
   orders.postOrder(req, res, next);
 });

@@ -10,14 +10,12 @@ let utils = require("../utils.js");
 
 // shared validation
 
-const TRACKING_NUM_IN_BODY_VALIDATION = // TODO: de-dupe with packages.js
-  ev.body("tracking-number").exists().withMessage("required param missing").bail()
-    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
+const TRACKING_NUM_IN_BODY_VALIDATION =
+  ev.body("tracking_number").exists().withMessage("required param missing").bail()
     .isAlphanumeric().withMessage("must be alphanumeric string");
 
 const TRACKING_NUM_IN_URL_VALIDATION =
   ev.param("trackingNumber").exists().withMessage("required param missing").bail()
-    .isLength({min:14, max: 14}).withMessage("must be 14 character string")
     .isAlphanumeric().withMessage("must be alphanumeric string");
 
 
@@ -29,8 +27,8 @@ exports.getAllWebhooks = (req, res, next) => {
   let allWebhooks = [];
   db.forEach(datum => {
       allWebhooks.push({
-        "tracking-number": datum.key,
-        "subscription-url": datum.value
+        "tracking_number": datum.key,
+        "subscription_url": datum.value
       });
     })
     .then(() => {
@@ -56,8 +54,8 @@ exports.getWebhook = (req, res, next) => {
         return;
       }
       let responseBody = {
-        "tracking-number": trackingNumber,
-        "subscription-url": dbRecord
+        "tracking_number": trackingNumber,
+        "subscription_url": dbRecord
       };
       res.json(responseBody);
     })
@@ -66,12 +64,12 @@ exports.getWebhook = (req, res, next) => {
 
 exports.POST_VALIDATOR = [
   TRACKING_NUM_IN_BODY_VALIDATION,
-  ev.body("subscription-url").exists().withMessage("required param missing").bail()
+  ev.body("subscription_url").exists().withMessage("required param missing").bail()
     .isURL().withMessage("not a valid url")
 ];
 exports.postWebhook = (req, res, next) => {
-  let trackingNumber = req.body["tracking-number"];
-  let url = req.body["subscription-url"];
+  let trackingNumber = req.body.tracking_number;
+  let url = req.body.subscription_url;
   console.log(`Saving webhook record '${trackingNumber} => ${url}'`);
 
   // TODO: indicate it already exists if you're updating and existing one
@@ -81,8 +79,8 @@ exports.postWebhook = (req, res, next) => {
       console.log(`Save item response: ${JSON.stringify(saveResponse)}`);
       let responseBody = {
         "msg": "succesfully added webhook",
-        "tracking-number": saveResponse.content.key,
-        "subscription-url": saveResponse.content.value,
+        "tracking_number": saveResponse.content.key,
+        "subscription_url": saveResponse.content.value,
       };
       res.status(201);
       res.json(responseBody);
@@ -101,7 +99,7 @@ exports.deleteWebhook = (req, res, next) => {
       console.log(`Delete result: ${JSON.stringify(deleteResult)}`);
       let responseBody = {
         "msg": "delete operation sucessful",
-        "tracking-number": trackingNumber
+        "tracking_number": trackingNumber
       };
       res.json(responseBody);
     })
@@ -110,13 +108,13 @@ exports.deleteWebhook = (req, res, next) => {
 
 exports.TRIGGER_VALIDATOR = [
   TRACKING_NUM_IN_BODY_VALIDATION,
-  ev.body("event-type").exists().withMessage("required param missing").bail()
+  ev.body("event_type").exists().withMessage("required param missing").bail()
     .isIn(Object.values(utils.PACKAGE_STATUS_MAP))
     .withMessage(`must be one of [${Object.values(utils.PACKAGE_STATUS_MAP)}]`)
 ];
 exports.triggerWebhook = (req, res, next) => {
-  let trackingNumber = req.body["tracking-number"];
-  let eventType = req.body["event-type"];
+  let trackingNumber = req.body.tracking_number;
+  let eventType = req.body.event_type;
   console.log(`Request to trigger webhook for '${trackingNumber}' with event '${eventType}'`);
 
   let db = onDiskDB.get();
@@ -138,14 +136,14 @@ exports.triggerWebhook = (req, res, next) => {
       console.log(`Post response: ${JSON.stringify(innerPostResponse.data)}`);
       let responseBody = {
         "msg": "triggered event posted succesfully",
-        "trigger-params": {
-          "tracking-number": trackingNumber,
-          "event-type": eventType,
-          "subscription-url": subscriptionUrl,
+        "trigger_params": {
+          "tracking_number": trackingNumber,
+          "event_type": eventType,
+          "subscription_url": subscriptionUrl,
         },
-        "trigger-response": {
+        "trigger_response": {
           "body": innerPostResponse.data,
-          "status-code": innerPostResponse.status
+          "status_code": innerPostResponse.status
         }
       };
       res.send(responseBody);
@@ -155,25 +153,25 @@ exports.triggerWebhook = (req, res, next) => {
       if (err.isAxiosError) {
         innerError = {
           "msg": `POST to subscription url failed with message '${err.message}'`,
-          "status-code": err.response.status,
+          "status_code": err.response.status,
           "response": err.response.data
         };
       } else {
         innerError = {
           "msg": err.message,
-          "staus-code": err.statusCode
+          "staus_code": err.statusCode
         };
       }
 
       let statusCode = err.statusCode ? err.statusCode : err.status; // axious errors use ".status"
       let responseBody = {
         "msg": "triggering event failed",
-        "trigger-params": {
-          "tracking-number": trackingNumber,
-          "event-type": eventType,
-          "subscription-url": subscriptionUrl,
+        "trigger_params": {
+          "tracking_number": trackingNumber,
+          "event_type": eventType,
+          "subscription_url": subscriptionUrl,
         },
-        "inner-error": innerError
+        "inner_error": innerError
       };
       // ensure error format is consistent with parameter validation errors
       res.status(500).json({"errors": [responseBody]});
@@ -196,7 +194,7 @@ function getExampleChangeEvent(trackingNumber, packageStatus) {
     throw new Error(`Unrecognized package status '${packageStatus}'`);
   }
   return {
-      "tracking-number": trackingNumber,
+      "tracking_number": trackingNumber,
       "date": "2019-10-20T11:07:31.136Z",
       "msg": `package ${packageStatus}`
   };

@@ -15,28 +15,28 @@ exports.orderRequestValidator = () => {
   let validator = [
     ev.body("size").exists().withMessage("required param missing").bail()
       .isIn(utils.PACKAGE_SIZES).withMessage(`must be one of [${utils.PACKAGE_SIZES}]`),
-    ev.body("pickup-note").if(ev.body("pickup-note").exists())
+    ev.body("pickup_note").if(ev.body("pickup_note").exists())
       .isLength({max: 90}).withMessage("max length is 90"),
-    ev.body("delivery-note").if(ev.body("delivery-note").exists())
+    ev.body("delivery_note").if(ev.body("delivery_note").exists())
       .isLength({max: 90}).withMessage("max length is 90")
   ];
-  validator.push(...addressValidation("from-address"));
-  validator.push(...addressValidation("to-address"));
+  validator.push(...addressValidation("from_address"));
+  validator.push(...addressValidation("to_address"));
   return validator;
 };
 
 exports.postOrder = (req, res, next) => {
   let size = req.body.size;
-  let pickupNote = req.body["pickup-note"] ? req.body["pickup-note"] : "";
-  let deliveryNote = req.body["delivery-note"] ? req.body["delivery-note"] : "";
+  let pickupNote = req.body.pickup_note ? req.body.pickup_note : "";
+  let deliveryNote = req.body.delivery_note ? req.body.delivery_note : "";
 
   let packageModel = {
     "recipient": {
       "note": deliveryNote,
       "isSignatureRequired": false
     },
-    "fromAddress": internalApiAddress(req, "from-address"),
-    "toAddress": internalApiAddress(req, "to-address"),
+    "fromAddress": internalApiAddress(req, "from_address"),
+    "toAddress": internalApiAddress(req, "to_address"),
     "isExpedited": false,
     "promoCode": "",
     "promoCodeId": "",
@@ -83,9 +83,9 @@ exports.postOrder = (req, res, next) => {
       let dueDatePacific = moment(dbDueDatetime).tz('America/Los_Angeles').format("YYYY-MM-DD");
 
       res.send({
-        "tracking-number": packageObj.trackingNumber,
-        "due-date": dueDatePacific,
-        "label-url": innerRes.data.data.packageResponseList[0].labelUrl // yea, not part of ".package"
+        "tracking_number": packageObj.trackingNumber,
+        "due_date": dueDatePacific,
+        "label_url": innerRes.data.data.packageResponseList[0].labelUrl // yea, not part of ".package"
       });
     })
     .catch((innerErr) => {
@@ -97,7 +97,7 @@ exports.postOrder = (req, res, next) => {
 
 let addressValidation = (addressType) => {
   let validator = [];
-  let requiredFields = ["line-1", "city", "state", "zip", "contact-name", "phone"];
+  let requiredFields = ["line_1", "city", "state", "zip", "contact_name", "phone"];
   requiredFields.push("coordinates", "coordinates.latitude", "coordinates.longitude");
   for (let requiredField of requiredFields) {
     let fullName = `${addressType}.${requiredField}`;
@@ -122,21 +122,21 @@ let addressValidation = (addressType) => {
   return validator;
 };
 
-// the given request should include both a "from-address" and "to-address", with
+// the given request should include both a "from_address" and "to_address", with
 // formatting as defined by our external-facing API.
 //
 // return the desired (to / from) address as given in our _internal_ API format (ie
 // as given by Rynly.Platform.Shared.Models.Address)
 let internalApiAddress = (req, addressType) => {
-  if (addressType !== "from-address" && addressType !== "to-address") {
+  if (addressType !== "from_address" && addressType !== "to_address") {
     throw new Error("Unexpected addressType " + addressType);
   }
 
   // CAREFUL: our client-facing API uses dash-case for parameters,
   // whereas our internal API uses CamelCase / kindaCamelCase
   return {
-    "line1": req.body[addressType]["line-1"],
-    "line2": req.body[addressType]["line-2"],
+    "line1": req.body[addressType].line_1,
+    "line2": req.body[addressType].line_2,
     "state": req.body[addressType].state,
     "city": req.body[addressType].city,
     "zip": req.body[addressType].zip,
@@ -145,7 +145,7 @@ let internalApiAddress = (req, addressType) => {
       "longitude": req.body[addressType].coordinates.longitude
     },
     "company": req.body[addressType].company,
-    "contactName": req.body[addressType]["contact-name"],
+    "contactName": req.body[addressType]["contact_name"],
     "phone": req.body[addressType].phone
   };
 };

@@ -8,11 +8,11 @@ let ev = require("express-validator");
 const { RYNLY_SERVER_URL } = require("../config.js");
 
 exports.GET_VALIDATOR = [
-  ev.query("phone-number").exists().withMessage("required param missing")
+  ev.query("phone_number").exists().withMessage("required param missing")
 ];
 
 exports.getValidatedNumber = (req, res, next) => {
-  let inputPhone = req.query["phone-number"];
+  let inputPhone = req.query.phone_number;
   let authToken = req.headers.authorization.trim();
   const url = `${RYNLY_SERVER_URL}/api/user/validatePhone`;
   let options = {
@@ -25,7 +25,6 @@ exports.getValidatedNumber = (req, res, next) => {
   // whether or not the phone number is valid.
   console.log(`Making phone validation GET request to '${url}' with options ${JSON.stringify(options)}`);
   axios.get(url, options).then(axiosRes => {
-    console.log('got" _' + JSON.stringify(axiosRes.data))
     res.json(axiosRes.data);
   }).catch(axiosErr => {
     console.error(axiosErr);

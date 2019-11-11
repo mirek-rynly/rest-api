@@ -8,10 +8,10 @@ let request = require("supertest");
 let testUtils = require("./test-utils.js");
 let app = require('../app.js');
 
-const LOCAL_PARAMS = "from-zip=97202&to-zip=97202";
-const LONG_DISTANCE_PARAMS = "from-zip=97202&to-zip=98001";
+const LOCAL_PARAMS = "from_zip=97202&to_zip=97202";
+const LONG_DISTANCE_PARAMS = "from_zip=97202&to_zip=98001";
 
-describe("GET /delivery-date with no order-creation-timestamp given", () => {
+describe("GET /delivery_date with no order_creation_timestamp given", () => {
   test("non-expedited local package created now", async () => {
     let url = getUrl(LOCAL_PARAMS, false, null);
     let res = await request(app).get(url);
@@ -20,12 +20,12 @@ describe("GET /delivery-date with no order-creation-timestamp given", () => {
     // e.g. "expedited local delivery for order placed right now (2019-10-28T06:00:00 Pacific)"
     let msgRegex = /end of day due date for order placed now \([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:.]+ Pacific\)/;
     expect(res.body.msg).toMatch(msgRegex);
-    expect(res.body["due-date"]).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/); // YYYY-MM-DD
+    expect(res.body["due_date"]).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/); // YYYY-MM-DD
   });
 
 });
 
-describe("GET /delivery-date for local packages", () => {
+describe("GET /delivery_date for local packages", () => {
   test("non-expedited package created on 10/28/19 monday", async () => {
     let timestamp = "2019-10-28T14:00:00Z"; // 2PM UTC = 6AM Pacific
     let url = getUrl(LOCAL_PARAMS, false, timestamp);
@@ -71,17 +71,17 @@ describe("GET /delivery-date for long-distance packages", () => {
   });
 });
 
-describe("GET /delivery-date param validation", () => {
+describe("GET /delivery_date param validation", () => {
   test("no params", async () => {
-    let res = await request(app).get(`/api/v1/delivery-date`);
+    let res = await request(app).get(`/api/v1/delivery_date`);
     expect(res.statusCode).toEqual(400);
-    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("from-zip"));
-    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("to-zip"));
-    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("is-expedited"));
+    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("from_zip"));
+    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("to_zip"));
+    expect(res.body.errors).toContainEqual(testUtils.missingParamMsg("is_expedited"));
   });
 });
 
-describe("GET /delivery-date timezone conversion", () => {
+describe("GET /delivery_date timezone conversion", () => {
   test("7AM UTC handled in pacific time of the previous day", async () => {
     let timestamp = "2019-10-29T04:00:00Z"; // Tuesday morning UTC = Monday evening Pacific
     let url = getUrl(LOCAL_PARAMS, false, timestamp);
@@ -97,7 +97,7 @@ async function timestampTest(url, expectedDate) {
   expect(res.statusCode).toEqual(200);
   expect(res.body).toEqual({
     msg: expect.any(String),
-    "due-date": expectedDate
+    "due_date": expectedDate
   });
 }
 
@@ -105,9 +105,9 @@ async function timestampTest(url, expectedDate) {
 // UTILS
 
 function getUrl(distanceParams, isExpedited, timestamp) {
-  let url = `/api/v1/delivery-date?${distanceParams}&is-expedited=${isExpedited}`;
+  let url = `/api/v1/delivery_date?${distanceParams}&is_expedited=${isExpedited}`;
   if (timestamp) {
-    url += `&order-creation-datetime=${timestamp}`;
+    url += `&order_creation_datetime=${timestamp}`;
   }
   return url;
 }
